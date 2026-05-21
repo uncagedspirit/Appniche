@@ -1,0 +1,132 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-ink-900 text-ink-100 font-sans antialiased;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  ::selection {
+    @apply bg-acid text-ink-900;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-ink-800;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-ink-600 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-ink-400;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-acid text-ink-900 font-semibold px-5 py-2.5 rounded-lg text-sm
+           hover:bg-acid-light transition-all duration-150 active:scale-95
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-ink-800 text-ink-100 font-medium px-5 py-2.5 rounded-lg text-sm
+           border border-ink-700 hover:bg-ink-700 hover:border-ink-600
+           transition-all duration-150 active:scale-95
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply text-ink-300 font-medium px-4 py-2 rounded-lg text-sm
+           hover:bg-ink-800 hover:text-ink-100
+           transition-all duration-150;
+  }
+
+  .card {
+    @apply bg-ink-800 border border-ink-700 rounded-xl p-5;
+  }
+
+  .card-hover {
+    @apply card hover:border-ink-500 hover:bg-ink-750 transition-all duration-150 cursor-pointer;
+  }
+
+  .input {
+    @apply bg-ink-800 border border-ink-700 text-ink-100 rounded-lg px-4 py-2.5 text-sm
+           placeholder:text-ink-500 focus:outline-none focus:border-acid focus:ring-1 focus:ring-acid/30
+           transition-all duration-150 w-full;
+  }
+
+  .select {
+    @apply bg-ink-800 border border-ink-700 text-ink-100 rounded-lg px-4 py-2.5 text-sm
+           focus:outline-none focus:border-acid focus:ring-1 focus:ring-acid/30
+           transition-all duration-150;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-green { @apply badge bg-green-500/15 text-green-400; }
+  .badge-yellow { @apply badge bg-yellow-500/15 text-yellow-400; }
+  .badge-red { @apply badge bg-red-500/15 text-red-400; }
+  .badge-blue { @apply badge bg-blue-500/15 text-blue-400; }
+  .badge-acid { @apply badge bg-acid/15 text-acid; }
+
+  .section-label {
+    @apply text-xs font-mono font-medium text-ink-500 uppercase tracking-widest;
+  }
+
+  .page-title {
+    @apply font-display text-2xl font-700 text-ink-50;
+  }
+
+  .divider {
+    @apply border-t border-ink-700;
+  }
+
+  .score-ring {
+    @apply inline-flex items-center justify-center rounded-full font-display font-bold;
+  }
+
+  .skeleton {
+    @apply bg-ink-700 rounded animate-pulse;
+  }
+}
+
+@layer utilities {
+  .font-700 { font-weight: 700; }
+  .font-800 { font-weight: 800; }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-acid to-acid-light bg-clip-text text-transparent;
+  }
+
+  .bg-ink-750 {
+    background-color: #1e1e1c;
+  }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+/* Toaster overrides */
+.react-hot-toast {
+  font-family: 'DM Sans', sans-serif !important;
+}
