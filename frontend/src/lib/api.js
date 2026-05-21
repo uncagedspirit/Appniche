@@ -55,6 +55,8 @@ export const nichesAPI = {
     api.get('/niches/analyze', { params: { category, country } }),
   opportunities: (country = 'us') =>
     api.get('/niches/opportunities', { params: { country } }),
+  search: (q, country = 'us') =>
+    api.get('/niches/search', { params: { q, country } }),
 };
 
 // Analysis

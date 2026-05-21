@@ -159,4 +159,85 @@ router.get('/opportunities', async (req, res) => {
   }
 });
 
+// GET /api/niches/search?q=meditation&country=us
+// AppStoreSpy-style keyword niche analysis
+router.get('/search', async (req, res) => {
+  const { q, country = 'us', lang = 'en' } = req.query;
+  if (!q?.trim()) return res.status(400).json({ error: 'q is required' });
+
+  const cacheKey = `niche-search:${q.toLowerCase().trim()}:${country}`;
+  const cached = getCached(cacheKey);
+  if (cached) return res.json(cached);
+
+  try {
+    const apps = await gplay.search({ term: q, country, lang, num: 30, fullDetail: false });
+    if (!apps.length) return res.json({ query: q, apps: [], metrics: null });
+
+    const parseInstalls = (str) => parseInt((str || '0').replace(/[^0-9]/g, '')) || 0;
+
+    const scored = apps.filter(a => (a.score || 0) > 0);
+    const avgRating = scored.length
+      ? scored.reduce((s, a) => s + a.score, 0) / scored.length
+      : 0;
+
+    const installNums = apps.map(a => parseInstalls(a.installs));
+    const avgInstalls = installNums.reduce((s, i) => s + i, 0) / installNums.length;
+
+    const weakApps = apps.filter(a => (a.score || 0) > 0 && a.score < 4.0);
+    const strongApps = apps.filter(a => (a.score || 0) >= 4.3 && parseInstalls(a.installs) >= 50000);
+
+    // Demand: how popular is this niche (log-scaled by average installs)
+    const demandScore = Math.min(100, Math.max(5,
+      Math.round(Math.log10(Math.max(avgInstalls, 10)) / Math.log10(5_000_000) * 100)
+    ));
+
+    // Competition: how hard to break in (high avg rating + many strong incumbents = tough)
+    const competitionScore = Math.min(100, Math.max(0, Math.round(
+      (avgRating / 5) * 50 +
+      (strongApps.length / Math.max(apps.length, 1)) * 50
+    )));
+
+    // Opportunity: high demand + low competition
+    const opportunityScore = Math.min(100, Math.max(0, Math.round(
+      demandScore * 0.5 + (100 - competitionScore) * 0.5
+    )));
+
+    const verdict =
+      opportunityScore >= 65 ? 'High Opportunity' :
+      opportunityScore >= 45 ? 'Moderate Opportunity' :
+      'Saturated';
+
+    const result = {
+      query: q,
+      totalFound: apps.length,
+      metrics: {
+        opportunityScore,
+        demandScore,
+        competitionScore,
+        avgRating: parseFloat(avgRating.toFixed(2)),
+        avgInstalls: Math.round(avgInstalls),
+        weakAppsCount: weakApps.length,
+        strongAppsCount: strongApps.length,
+        verdict,
+      },
+      apps: apps.slice(0, 20).map(a => ({
+        appId: a.appId,
+        title: a.title,
+        developer: a.developer,
+        icon: a.icon,
+        score: a.score,
+        reviews: a.reviews,
+        installs: a.installs,
+        free: a.free,
+        price: a.price,
+      })),
+    };
+
+    setCache(cacheKey, result, 3600);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export default router;
