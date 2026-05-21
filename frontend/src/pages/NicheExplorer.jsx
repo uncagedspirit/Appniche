@@ -21,7 +21,8 @@ export default function NicheExplorer() {
   useEffect(() => {
     nichesAPI.categories().then(setCategories).catch(() => {});
     loadOpportunities();
-  }, [country]);
+    if (selected) handleSelectCategory(selected);
+  }, [country]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (searchParams.get('cat')) handleSelectCategory(searchParams.get('cat'));
