@@ -22,13 +22,16 @@ export default function SavedItems() {
     ]).then(([s, a, i, t]) => {
       setSearches(s); setAnalyses(a); setIdeas(i); setTracked(t);
     }).catch(() => {}).finally(() => setLoading(false));
-  }, [user]);
+  }, []);
 
   const del = async (type, id, setter) => {
     try {
       if (type === 'search') await dbOps.deleteSearch(null, id);
       else if (type === 'idea') await dbOps.deleteIdea(null, id);
-      else if (type === 'tracked') await dbOps.untrackApp(null, id.split('_')[1], id.split('_')[0]);
+      else if (type === 'tracked') {
+        const sep = id.indexOf('_');
+        await dbOps.untrackApp(null, id.slice(sep + 1), id.slice(0, sep));
+      }
       setter(prev => prev.filter(x => x.id !== id));
       toast.success('Deleted');
     } catch { toast.error('Failed to delete'); }
@@ -132,7 +135,7 @@ export default function SavedItems() {
             {tracked.map(app => (
               <div key={app.id} className="card flex items-center gap-3">
                 <img src={app.icon} className="w-10 h-10 rounded-xl" alt={app.title}
-                  onError={e => { e.target.src = `https://ui-avatars.com/api/?name=${app.title}&background=2a2a27&color=a8a8a2&size=40`; }} />
+                  onError={e => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(app.title)}&background=2a2a27&color=a8a8a2&size=40`; }} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-ink-100 truncate">{app.title}</p>
                   <div className="flex items-center gap-1 mt-0.5">

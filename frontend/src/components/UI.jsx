@@ -14,13 +14,14 @@ export function PageHeader({ title, subtitle, action }) {
 
 export function ScoreRing({ score, size = 'md', label }) {
   const sizes = { sm: 'w-10 h-10 text-sm', md: 'w-14 h-14 text-base', lg: 'w-20 h-20 text-xl' };
-  const color = score >= 70 ? 'text-green-400 border-green-400/40' :
-                score >= 40 ? 'text-yellow-400 border-yellow-400/40' : 'text-red-400 border-red-400/40';
+  const s = score ?? 0;
+  const color = s >= 70 ? 'text-green-400 border-green-400/40' :
+                s >= 40 ? 'text-yellow-400 border-yellow-400/40' : 'text-red-400 border-red-400/40';
 
   return (
     <div className="flex flex-col items-center gap-1">
       <div className={clsx('score-ring border-2 font-display font-700', sizes[size], color)}>
-        {score}
+        {s}
       </div>
       {label && <span className="text-xs text-ink-500">{label}</span>}
     </div>
@@ -28,13 +29,14 @@ export function ScoreRing({ score, size = 'md', label }) {
 }
 
 export function Stars({ score }) {
-  const filled = Math.round(score || 0);
+  const s = parseFloat(score) || 0;
+  const filled = Math.round(s);
   return (
     <div className="flex items-center gap-0.5">
       {[1,2,3,4,5].map(i => (
         <span key={i} className={i <= filled ? 'text-yellow-400' : 'text-ink-600'} style={{fontSize:'11px'}}>★</span>
       ))}
-      <span className="text-xs text-ink-400 ml-1">{(score || 0).toFixed(1)}</span>
+      <span className="text-xs text-ink-400 ml-1">{s.toFixed(1)}</span>
     </div>
   );
 }
@@ -98,7 +100,7 @@ export function AppCard({ app, onClick, selected }) {
         src={app.icon}
         alt={app.title}
         className="w-10 h-10 rounded-xl flex-shrink-0 bg-ink-700"
-        onError={e => { e.target.src = `https://ui-avatars.com/api/?name=${app.title}&background=2a2a27&color=a8a8a2&size=40`; }}
+        onError={e => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(app.title)}&background=2a2a27&color=a8a8a2&size=40`; }}
       />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-ink-100 truncate">{app.title}</p>

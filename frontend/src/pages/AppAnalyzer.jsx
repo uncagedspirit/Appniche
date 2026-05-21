@@ -190,7 +190,7 @@ export default function AppAnalyzer() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => handleTrack(appDetail)} className="btn-secondary text-xs">Track</button>
+                      <button onClick={() => appDetail && handleTrack(appDetail)} className="btn-secondary text-xs">Track</button>
                       <button onClick={handleGapAnalysis} className="btn-primary text-xs flex items-center gap-1" disabled={loadingGap}>
                         <Zap size={12} />
                         {loadingGap ? 'Analyzing...' : 'Gap Analysis'}
@@ -272,7 +272,7 @@ export default function AppAnalyzer() {
                         <div className="flex items-start justify-between mb-2">
                           <div>
                             <p className="text-xs font-medium text-ink-200">{r.userName}</p>
-                            <p className="text-xs text-ink-500">{new Date(r.date).toLocaleDateString()}</p>
+                            <p className="text-xs text-ink-500">{r.date ? new Date(r.date).toLocaleDateString() : ''}</p>
                           </div>
                           <div className="flex">
                             {[1,2,3,4,5].map(i => (

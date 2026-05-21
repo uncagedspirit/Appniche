@@ -175,7 +175,7 @@ export default function NicheExplorer() {
                     {(tab === 'top_free' ? nicheData.topFree :
                       tab === 'top_paid' ? nicheData.topPaid :
                       nicheData.topGrossing
-                    ).map(app => (
+                    )?.map(app => (
                       <AppCard key={app.appId} app={app} />
                     ))}
                   </div>
