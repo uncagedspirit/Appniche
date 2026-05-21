@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { nichesAPI } from '../lib/api.js';
+import { useSettings } from '../context/SettingsContext.jsx';
 import { PageHeader, CountrySelect, LoadingState, ErrorState, ScoreRing, Stars, TabBar, AppCard } from '../components/UI.jsx';
 import { Compass, TrendingUp } from 'lucide-react';
 import clsx from 'clsx';
 
 export default function NicheExplorer() {
   const [searchParams] = useSearchParams();
-  const [country, setCountry] = useState('us');
+  const { country, setCountry } = useSettings();
   const [categories, setCategories] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
   const [selected, setSelected] = useState(searchParams.get('cat') || null);

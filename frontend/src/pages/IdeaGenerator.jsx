@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { analysisAPI, keywordsAPI } from '../lib/api.js';
+import { useSettings } from '../context/SettingsContext.jsx';
 import { dbOps } from '../lib/db.js';
 import { PageHeader, CountrySelect, LoadingState } from '../components/UI.jsx';
 import { Lightbulb, Save, Plus, X, Sparkles, Clock, DollarSign, Layers, Target } from 'lucide-react';
@@ -7,8 +8,8 @@ import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
 export default function IdeaGenerator() {
+  const { country, setCountry } = useSettings();
   const [niche, setNiche] = useState('');
-  const [country, setCountry] = useState('us');
   const [gaps, setGaps] = useState([]);
   const [gapInput, setGapInput] = useState('');
   const [keywords, setKeywords] = useState([]);

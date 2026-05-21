@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { appsAPI, analysisAPI } from '../lib/api.js';
+import { useSettings } from '../context/SettingsContext.jsx';
 import { dbOps } from '../lib/db.js';
 import { PageHeader, PlatformToggle, CountrySelect, LoadingState, ErrorState, Stars, TabBar, AppCard, ScoreRing } from '../components/UI.jsx';
 import { Search, Plus, Trash2, Zap, Save, Users, TrendingDown } from 'lucide-react';
@@ -7,9 +8,9 @@ import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
 export default function AppAnalyzer() {
+  const { country, setCountry } = useSettings();
   const [searchQ, setSearchQ] = useState('');
   const [platform, setPlatform] = useState('android');
-  const [country, setCountry] = useState('us');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [selectedApp, setSelectedApp] = useState(null);

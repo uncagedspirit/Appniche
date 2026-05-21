@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { keywordsAPI, appsAPI } from '../lib/api.js';
+import { useSettings } from '../context/SettingsContext.jsx';
 import { dbOps } from '../lib/db.js';
 import { PageHeader, CountrySelect, LoadingState, ErrorState, KeywordBadge, AppCard, TabBar, SkeletonCard } from '../components/UI.jsx';
 import { Search, Download, Save, ChevronRight, AlertCircle, TrendingUp, Layers } from 'lucide-react';
@@ -7,8 +8,8 @@ import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
 export default function KeywordResearch() {
+  const { country, setCountry } = useSettings();
   const [query, setQuery] = useState('');
-  const [country, setCountry] = useState('us');
   const [tab, setTab] = useState('suggestions');
   const [loading, setLoading] = useState(false);
   const [expandLoading, setExpandLoading] = useState(false);

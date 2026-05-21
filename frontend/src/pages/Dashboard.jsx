@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { dbOps } from '../lib/db.js';
+import { useSettings } from '../context/SettingsContext.jsx';
 import { nichesAPI } from '../lib/api.js';
 import { PageHeader, StatCard, LoadingState, ScoreRing } from '../components/UI.jsx';
 import { Search, Compass, Smartphone, Lightbulb, Zap, Bookmark, ArrowRight, TrendingUp } from 'lucide-react';
@@ -16,6 +17,7 @@ const QUICK_ACTIONS = [
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { country } = useSettings();
   const [stats, setStats] = useState({ searches: 0, analyses: 0, ideas: 0, tracked: 0 });
   const [opportunities, setOpportunities] = useState([]);
   const [loadingOpp, setLoadingOpp] = useState(true);
@@ -30,11 +32,12 @@ export default function Dashboard() {
       setStats({ searches: searches.length, analyses: analyses.length, ideas: ideas.length, tracked: tracked.length });
     }).catch(() => {});
 
-    nichesAPI.opportunities('us')
+    setLoadingOpp(true);
+    nichesAPI.opportunities(country)
       .then(data => setOpportunities(data?.slice(0, 6) || []))
       .catch(() => {})
       .finally(() => setLoadingOpp(false));
-  }, []);
+  }, [country]);
 
 
   return (
