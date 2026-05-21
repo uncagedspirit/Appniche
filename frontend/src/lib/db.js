@@ -1,127 +1,82 @@
-import {
-  collection, doc, addDoc, setDoc, getDoc, getDocs,
-  deleteDoc, query, where, orderBy, serverTimestamp, updateDoc
-} from 'firebase/firestore';
-import { db } from './firebase.js';
+const KEYS = {
+  searches: 'appniche_searches',
+  analyses: 'appniche_analyses',
+  ideas: 'appniche_ideas',
+  tracked: 'appniche_tracked',
+  collections: 'appniche_collections',
+};
 
-// Collections
+const read = (key) => JSON.parse(localStorage.getItem(key) || '[]');
+const write = (key, data) => localStorage.setItem(key, JSON.stringify(data));
+const genId = () => Math.random().toString(36).slice(2, 10);
+
 export const dbOps = {
-  // Saved searches
-  async saveSearch(userId, data) {
-    return addDoc(collection(db, 'users', userId, 'searches'), {
-      ...data,
-      createdAt: serverTimestamp()
-    });
+  async saveSearch(_uid, data) {
+    const items = read(KEYS.searches);
+    const item = { id: genId(), ...data, createdAt: new Date().toISOString() };
+    write(KEYS.searches, [item, ...items]);
+    return item;
+  },
+  async getSearches(_uid) {
+    return read(KEYS.searches);
+  },
+  async deleteSearch(_uid, searchId) {
+    write(KEYS.searches, read(KEYS.searches).filter(x => x.id !== searchId));
   },
 
-  async getSearches(userId) {
-    const q = query(
-      collection(db, 'users', userId, 'searches'),
-      orderBy('createdAt', 'desc')
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  async saveCollection(_uid, data) {
+    const items = read(KEYS.collections);
+    const item = { id: genId(), ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    write(KEYS.collections, [item, ...items]);
+    return item;
+  },
+  async getCollections(_uid) {
+    return read(KEYS.collections);
+  },
+  async updateCollection(_uid, collectionId, data) {
+    write(KEYS.collections, read(KEYS.collections).map(x =>
+      x.id === collectionId ? { ...x, ...data, updatedAt: new Date().toISOString() } : x
+    ));
+  },
+  async deleteCollection(_uid, collectionId) {
+    write(KEYS.collections, read(KEYS.collections).filter(x => x.id !== collectionId));
   },
 
-  async deleteSearch(userId, searchId) {
-    return deleteDoc(doc(db, 'users', userId, 'searches', searchId));
-  },
-
-  // Saved app collections
-  async saveCollection(userId, data) {
-    return addDoc(collection(db, 'users', userId, 'collections'), {
-      ...data,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
-  },
-
-  async getCollections(userId) {
-    const q = query(
-      collection(db, 'users', userId, 'collections'),
-      orderBy('createdAt', 'desc')
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  },
-
-  async updateCollection(userId, collectionId, data) {
-    return updateDoc(doc(db, 'users', userId, 'collections', collectionId), {
-      ...data,
-      updatedAt: serverTimestamp()
-    });
-  },
-
-  async deleteCollection(userId, collectionId) {
-    return deleteDoc(doc(db, 'users', userId, 'collections', collectionId));
-  },
-
-  // Tracked apps
-  async trackApp(userId, appData) {
+  async trackApp(_uid, appData) {
     const id = `${appData.platform}_${appData.appId}`;
-    return setDoc(doc(db, 'users', userId, 'tracked', id), {
-      ...appData,
-      trackedAt: serverTimestamp()
-    });
+    const items = read(KEYS.tracked).filter(x => x.id !== id);
+    write(KEYS.tracked, [{ id, ...appData, trackedAt: new Date().toISOString() }, ...items]);
+  },
+  async getTrackedApps(_uid) {
+    return read(KEYS.tracked);
+  },
+  async untrackApp(_uid, appId, platform) {
+    write(KEYS.tracked, read(KEYS.tracked).filter(x => x.id !== `${platform}_${appId}`));
   },
 
-  async getTrackedApps(userId) {
-    const snap = await getDocs(collection(db, 'users', userId, 'tracked'));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  async saveAnalysis(_uid, data) {
+    const items = read(KEYS.analyses);
+    const item = { id: genId(), ...data, createdAt: new Date().toISOString() };
+    write(KEYS.analyses, [item, ...items]);
+    return item;
+  },
+  async getAnalyses(_uid) {
+    return read(KEYS.analyses);
   },
 
-  async untrackApp(userId, appId, platform) {
-    return deleteDoc(doc(db, 'users', userId, 'tracked', `${platform}_${appId}`));
+  async saveIdea(_uid, data) {
+    const items = read(KEYS.ideas);
+    const item = { id: genId(), ...data, createdAt: new Date().toISOString() };
+    write(KEYS.ideas, [item, ...items]);
+    return item;
+  },
+  async getIdeas(_uid) {
+    return read(KEYS.ideas);
+  },
+  async deleteIdea(_uid, ideaId) {
+    write(KEYS.ideas, read(KEYS.ideas).filter(x => x.id !== ideaId));
   },
 
-  // Saved gap analyses
-  async saveAnalysis(userId, data) {
-    return addDoc(collection(db, 'users', userId, 'analyses'), {
-      ...data,
-      createdAt: serverTimestamp()
-    });
-  },
-
-  async getAnalyses(userId) {
-    const q = query(
-      collection(db, 'users', userId, 'analyses'),
-      orderBy('createdAt', 'desc')
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  },
-
-  // Saved app ideas
-  async saveIdea(userId, data) {
-    return addDoc(collection(db, 'users', userId, 'ideas'), {
-      ...data,
-      createdAt: serverTimestamp()
-    });
-  },
-
-  async getIdeas(userId) {
-    const q = query(
-      collection(db, 'users', userId, 'ideas'),
-      orderBy('createdAt', 'desc')
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  },
-
-  async deleteIdea(userId, ideaId) {
-    return deleteDoc(doc(db, 'users', userId, 'ideas', ideaId));
-  },
-
-  // User profile
-  async setUserProfile(userId, data) {
-    return setDoc(doc(db, 'users', userId, 'profile', 'data'), {
-      ...data,
-      updatedAt: serverTimestamp()
-    }, { merge: true });
-  },
-
-  async getUserProfile(userId) {
-    const snap = await getDoc(doc(db, 'users', userId, 'profile', 'data'));
-    return snap.exists() ? snap.data() : null;
-  }
+  async setUserProfile(_uid, _data) {},
+  async getUserProfile(_uid) { return null; },
 };

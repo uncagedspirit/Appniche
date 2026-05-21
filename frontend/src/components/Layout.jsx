@@ -1,8 +1,7 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext.jsx';
+import { Outlet, NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Search, Compass, Smartphone,
-  Lightbulb, Zap, Bookmark, LogOut, ChevronRight
+  Lightbulb, Zap, Bookmark, ChevronRight
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -17,14 +16,6 @@ const NAV = [
 ];
 
 export default function Layout() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    await logout();
-    navigate('/');
-  };
-
   return (
     <div className="flex h-screen bg-ink-900 overflow-hidden">
       {/* Sidebar */}
@@ -64,27 +55,6 @@ export default function Layout() {
           ))}
         </nav>
 
-        {/* User */}
-        <div className="px-3 py-4 border-t border-ink-800">
-          <div className="flex items-center gap-3 px-3 py-2 rounded-lg">
-            <img
-              src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.displayName}&background=c8f135&color=0a0a0a&size=32`}
-              alt="avatar"
-              className="w-7 h-7 rounded-full flex-shrink-0"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-ink-200 truncate">{user?.displayName || 'User'}</p>
-              <p className="text-xs text-ink-500 truncate">{user?.email}</p>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="text-ink-500 hover:text-red-400 transition-colors"
-              title="Sign out"
-            >
-              <LogOut size={14} />
-            </button>
-          </div>
-        </div>
       </aside>
 
       {/* Main */}

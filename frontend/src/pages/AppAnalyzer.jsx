@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useAuth } from '../context/AuthContext.jsx';
 import { appsAPI, analysisAPI } from '../lib/api.js';
 import { dbOps } from '../lib/db.js';
 import { PageHeader, PlatformToggle, CountrySelect, LoadingState, ErrorState, Stars, TabBar, AppCard, ScoreRing } from '../components/UI.jsx';
@@ -8,7 +7,6 @@ import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
 export default function AppAnalyzer() {
-  const { user } = useAuth();
   const [searchQ, setSearchQ] = useState('');
   const [platform, setPlatform] = useState('android');
   const [country, setCountry] = useState('us');
@@ -62,14 +60,12 @@ export default function AppAnalyzer() {
       setGapAnalysis(data);
       setTab('gaps');
       // Save to DB
-      if (user) {
-        await dbOps.saveAnalysis(user.uid, {
-          appId: selectedApp.appId,
-          appTitle: appDetail?.title || selectedApp.title,
-          platform,
-          ...data
-        });
-      }
+      await dbOps.saveAnalysis(null, {
+        appId: selectedApp.appId,
+        appTitle: appDetail?.title || selectedApp.title,
+        platform,
+        ...data
+      });
     } catch (e) { toast.error(e.message); }
     finally { setLoadingGap(false); }
   };
@@ -92,9 +88,8 @@ export default function AppAnalyzer() {
   };
 
   const handleTrack = async (app) => {
-    if (!user) return;
     try {
-      await dbOps.trackApp(user.uid, { appId: app.appId, title: app.title, icon: app.icon, platform, score: app.score });
+      await dbOps.trackApp(null, { appId: app.appId, title: app.title, icon: app.icon, platform, score: app.score });
       toast.success('App tracked!');
     } catch { toast.error('Failed to track'); }
   };

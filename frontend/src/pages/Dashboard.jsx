@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext.jsx';
 import { dbOps } from '../lib/db.js';
 import { nichesAPI } from '../lib/api.js';
 import { PageHeader, StatCard, LoadingState, ScoreRing } from '../components/UI.jsx';
@@ -16,37 +15,32 @@ const QUICK_ACTIONS = [
 ];
 
 export default function Dashboard() {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState({ searches: 0, analyses: 0, ideas: 0, tracked: 0 });
   const [opportunities, setOpportunities] = useState([]);
   const [loadingOpp, setLoadingOpp] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
-    // Load user stats
     Promise.all([
-      dbOps.getSearches(user.uid),
-      dbOps.getAnalyses(user.uid),
-      dbOps.getIdeas(user.uid),
-      dbOps.getTrackedApps(user.uid)
+      dbOps.getSearches(),
+      dbOps.getAnalyses(),
+      dbOps.getIdeas(),
+      dbOps.getTrackedApps()
     ]).then(([searches, analyses, ideas, tracked]) => {
       setStats({ searches: searches.length, analyses: analyses.length, ideas: ideas.length, tracked: tracked.length });
     }).catch(() => {});
 
-    // Load top opportunities
     nichesAPI.opportunities('us')
       .then(data => setOpportunities(data?.slice(0, 6) || []))
       .catch(() => {})
       .finally(() => setLoadingOpp(false));
-  }, [user]);
+  }, []);
 
-  const name = user?.displayName?.split(' ')[0] || 'there';
 
   return (
     <div className="p-8 max-w-5xl">
       <div className="mb-8">
-        <h1 className="font-display text-2xl font-700 text-ink-50">Hey, {name} 👋</h1>
+        <h1 className="font-display text-2xl font-700 text-ink-50">Dashboard</h1>
         <p className="text-sm text-ink-400 mt-1">Here's your app intelligence overview.</p>
       </div>
 

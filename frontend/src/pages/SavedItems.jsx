@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext.jsx';
 import { dbOps } from '../lib/db.js';
 import { PageHeader, TabBar, LoadingState, EmptyState, Stars } from '../components/UI.jsx';
 import { Bookmark, Trash2, Search, Smartphone, Lightbulb, BarChart2 } from 'lucide-react';
@@ -7,7 +6,6 @@ import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
 export default function SavedItems() {
-  const { user } = useAuth();
   const [tab, setTab] = useState('ideas');
   const [searches, setSearches] = useState([]);
   const [analyses, setAnalyses] = useState([]);
@@ -16,12 +14,11 @@ export default function SavedItems() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
     Promise.all([
-      dbOps.getSearches(user.uid),
-      dbOps.getAnalyses(user.uid),
-      dbOps.getIdeas(user.uid),
-      dbOps.getTrackedApps(user.uid)
+      dbOps.getSearches(),
+      dbOps.getAnalyses(),
+      dbOps.getIdeas(),
+      dbOps.getTrackedApps()
     ]).then(([s, a, i, t]) => {
       setSearches(s); setAnalyses(a); setIdeas(i); setTracked(t);
     }).catch(() => {}).finally(() => setLoading(false));
@@ -29,9 +26,9 @@ export default function SavedItems() {
 
   const del = async (type, id, setter) => {
     try {
-      if (type === 'search') await dbOps.deleteSearch(user.uid, id);
-      else if (type === 'idea') await dbOps.deleteIdea(user.uid, id);
-      else if (type === 'tracked') await dbOps.untrackApp(user.uid, id.split('_')[1], id.split('_')[0]);
+      if (type === 'search') await dbOps.deleteSearch(null, id);
+      else if (type === 'idea') await dbOps.deleteIdea(null, id);
+      else if (type === 'tracked') await dbOps.untrackApp(null, id.split('_')[1], id.split('_')[0]);
       setter(prev => prev.filter(x => x.id !== id));
       toast.success('Deleted');
     } catch { toast.error('Failed to delete'); }

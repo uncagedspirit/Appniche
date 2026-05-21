@@ -1,15 +1,10 @@
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext.jsx';
 import { ArrowRight, Search, Lightbulb, TrendingUp, Zap, BarChart2, Target } from 'lucide-react';
 
 export default function Landing() {
-  const { user, signInGoogle } = useAuth();
   const navigate = useNavigate();
 
-  const handleCTA = async () => {
-    if (user) { navigate('/app'); return; }
-    try { await signInGoogle(); navigate('/app'); } catch {}
-  };
+  const handleCTA = () => navigate('/app');
 
   const features = [
     { icon: Search, title: 'Keyword Intelligence', desc: '100+ keywords from any niche using Play Store + App Store autocomplete with difficulty scoring.' },
@@ -31,7 +26,7 @@ export default function Landing() {
           <span className="font-display font-700 text-ink-50">AppNiche</span>
         </div>
         <button onClick={handleCTA} className="btn-primary flex items-center gap-2">
-          {user ? 'Go to Dashboard' : 'Get Started'}
+          Get Started
           <ArrowRight size={14} />
         </button>
       </nav>

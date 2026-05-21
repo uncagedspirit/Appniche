@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useAuth } from '../context/AuthContext.jsx';
 import { analysisAPI, keywordsAPI } from '../lib/api.js';
 import { dbOps } from '../lib/db.js';
 import { PageHeader, CountrySelect, LoadingState } from '../components/UI.jsx';
@@ -8,7 +7,6 @@ import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
 export default function IdeaGenerator() {
-  const { user } = useAuth();
   const [niche, setNiche] = useState('');
   const [country, setCountry] = useState('us');
   const [gaps, setGaps] = useState([]);
@@ -50,9 +48,8 @@ export default function IdeaGenerator() {
   };
 
   const handleSave = async (idea, idx) => {
-    if (!user) return;
     try {
-      await dbOps.saveIdea(user.uid, { niche, idea, country, savedAt: new Date().toISOString() });
+      await dbOps.saveIdea(null, { niche, idea, country, savedAt: new Date().toISOString() });
       setSavedIds(prev => new Set([...prev, idx]));
       toast.success('Idea saved!');
     } catch { toast.error('Failed to save'); }

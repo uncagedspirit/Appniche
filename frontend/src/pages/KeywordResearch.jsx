@@ -1,5 +1,4 @@
 import { useState, useRef } from 'react';
-import { useAuth } from '../context/AuthContext.jsx';
 import { keywordsAPI, appsAPI } from '../lib/api.js';
 import { dbOps } from '../lib/db.js';
 import { PageHeader, CountrySelect, LoadingState, ErrorState, KeywordBadge, AppCard, TabBar, SkeletonCard } from '../components/UI.jsx';
@@ -8,7 +7,6 @@ import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
 export default function KeywordResearch() {
-  const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [country, setCountry] = useState('us');
   const [tab, setTab] = useState('suggestions');
@@ -80,9 +78,9 @@ export default function KeywordResearch() {
   };
 
   const handleSave = async () => {
-    if (!suggestions || !user) return;
+    if (!suggestions) return;
     try {
-      await dbOps.saveSearch(user.uid, {
+      await dbOps.saveSearch(null, {
         type: 'keyword',
         query,
         country,
