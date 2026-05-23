@@ -194,13 +194,11 @@ function countActiveFilters(f) {
 
 function applyKeywordFilter(apps, query, enabled) {
   if (!enabled || !query) return apps;
-  const words = query.toLowerCase().split(/\s+/).filter(w =>
-    !['app', 'free', 'pro', 'best', 'game'].includes(w) && w.length > 1
-  );
+  const words = query.trim().toLowerCase().split(/\s+/).filter(w => w.length > 1);
   if (!words.length) return apps;
   return apps.filter(app => {
     const title = (app.title || '').toLowerCase();
-    return words.some(w => title.includes(w));
+    return words.every(w => title.includes(w));
   });
 }
 
@@ -280,21 +278,25 @@ export default function NicheExplorer() {
       setAllApps(d.apps || []);
       setLoadingSearch(false);
 
-      // Fetch Play Store keyword suggestions for this query (dynamic, no hardcoding)
+      // Fetch Play Store keyword suggestions — all of them, no cap
       let suggestions = [];
       try {
         const s = await keywordsAPI.suggest(query.trim(), country);
-        suggestions = (s.play || []).slice(0, 5);
+        suggestions = s.play || [];
       } catch { /* suggestions optional */ }
 
-      // Search each suggestion to surface apps from different parts of the index
-      const extraQueries = suggestions.length ? suggestions : [];
+      // Build full queue: all suggestions + niches batches 1-5 (different query variants)
+      const queue = [
+        ...suggestions.map(q => ({ q, batch: 0 })),
+        ...[1, 2, 3, 4, 5].map(b => ({ q: query.trim(), batch: b })),
+      ];
+
       setLoadingBatches(true);
-      for (let i = 0; i < extraQueries.length; i++) {
+      for (let i = 0; i < queue.length; i++) {
         if (searchIdRef.current !== sid) break;
         setBatchProgress(i + 1);
         try {
-          const bd = await nichesAPI.search(extraQueries[i], country, 0);
+          const bd = await nichesAPI.search(queue[i].q, country, queue[i].batch);
           if (searchIdRef.current !== sid) break;
           const fresh = (bd.apps || []).filter(a => {
             if (seen.has(a.appId)) return false;
