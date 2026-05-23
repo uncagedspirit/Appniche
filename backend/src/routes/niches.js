@@ -204,35 +204,20 @@ router.get('/opportunities', async (req, res) => {
   }
 });
 
-// Batch query variants — each batch uses a different search query so repeated
-// fetches surface different apps (all deduplicated on the client).
-const BATCH_QUERIES = [
-  q => q,               // 0 – exact term
-  q => q + ' game',     // 1 – game variant
-  q => q + ' app',      // 2 – app variant
-  q => q + ' free',     // 3 – free variant
-  q => 'best ' + q,     // 4 – best variant
-  q => q + ' pro',      // 5 – pro variant
-];
-
-// GET /api/niches/search?q=meditation&country=us&batch=0
-// Deep keyword niche analysis with full ASO data.
-// batch: 0-5 — each batch runs a slightly different search query so the client
-// can accumulate 250 × 6 = 1 500 raw results (deduped by appId client-side).
+// GET /api/niches/search?q=meditation&country=us&page=0
 router.get('/search', async (req, res) => {
-  const { q, country = 'us', lang = 'en', batch: batchParam } = req.query;
+  const { q, country = 'us', lang = 'en', page: pageParam } = req.query;
   if (!q?.trim()) return res.status(400).json({ error: 'q is required' });
 
-  const batchIndex  = Math.max(0, Math.min(5, parseInt(batchParam) || 0));
-  const baseQuery   = q.trim().toLowerCase();
-  const searchQuery = BATCH_QUERIES[batchIndex](baseQuery);
-  const cacheKey    = `niche-v5:${baseQuery}:${country}:b${batchIndex}`;
+  const page      = Math.max(0, parseInt(pageParam) || 0);
+  const baseQuery = q.trim().toLowerCase();
+  const cacheKey  = `niche-v6:${baseQuery}:${country}:p${page}`;
   const cached = getCached(cacheKey);
   if (cached) return res.json(cached);
 
   try {
-    // Fetch up to 250 apps — Google Play hard limit per query
-    const basicApps = await gplay.search({ term: searchQuery, country, lang, num: 250, fullDetail: false });
+    const num = 250;
+    const basicApps = await gplay.search({ term: baseQuery, country, lang, num, fullDetail: false });
     if (!basicApps.length) return res.json({ query: q, apps: [], metrics: null });
 
     // Full detail for top 20 in parallel (with per-app 8 s timeout)

@@ -216,7 +216,6 @@ export default function NicheExplorer() {
   const [allApps,        setAllApps]        = useState([]);
   const [loadingSearch,  setLoadingSearch]  = useState(false);
   const [loadingBatches, setLoadingBatches] = useState(false);
-  const [batchProgress,  setBatchProgress]  = useState(0);
   const [searchError,    setSearchError]    = useState(null);
   const [filters,        setFilters]        = useState(DEFAULT_FILTERS);
   const [sortKey,        setSortKey]        = useState('default');
@@ -272,11 +271,10 @@ export default function NicheExplorer() {
     if (!query.trim()) return;
     const sid = ++searchIdRef.current;
     setSearchResult(null); setAllApps([]); setSearchError(null);
-    setLoadingSearch(true); setLoadingBatches(false); setBatchProgress(0);
+    setLoadingSearch(true); setLoadingBatches(false);
     setFilters(DEFAULT_FILTERS); setSortKey('default');
 
     try {
-      // Batch 0 — exact query, show results immediately
       const d = await nichesAPI.search(query.trim(), apiCountry, 0);
       if (searchIdRef.current !== sid) return;
       setSearchResult(d);
@@ -284,35 +282,23 @@ export default function NicheExplorer() {
       setAllApps(d.apps || []);
       setLoadingSearch(false);
 
-      // Build queue: suggestions + alphabet expansions (a-z) — keeps going until exhausted
-      let suggestions = [];
-      try {
-        const s = await keywordsAPI.suggest(query.trim(), apiCountry);
-        suggestions = s.play || [];
-      } catch {}
-
-      const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
-      const queue = [
-        ...suggestions.map(q => ({ q, batch: 0 })),
-        ...alphabet.map(l => ({ q: `${query.trim()} ${l}`, batch: 0 })),
-      ];
-
+      // Keep fetching the same query until no new apps come back
       setLoadingBatches(true);
-      let emptyRuns = 0;
-      for (const item of queue) {
+      let page = 1;
+      while (true) {
         if (searchIdRef.current !== sid) break;
-        if (emptyRuns >= 5) break; // stop after 5 consecutive searches with no new apps
         try {
-          const bd = await nichesAPI.search(item.q, apiCountry, item.batch);
+          const bd = await nichesAPI.search(query.trim(), apiCountry, page);
           if (searchIdRef.current !== sid) break;
           const fresh = (bd.apps || []).filter(a => {
             if (seen.has(a.appId)) return false;
             seen.add(a.appId);
             return true;
           });
-          if (fresh.length) { setAllApps(prev => [...prev, ...fresh]); emptyRuns = 0; }
-          else emptyRuns++;
-        } catch { emptyRuns++; }
+          if (!fresh.length) break;
+          setAllApps(prev => [...prev, ...fresh]);
+          page++;
+        } catch { break; }
       }
     } catch (err) {
       if (searchIdRef.current === sid) {
@@ -320,10 +306,7 @@ export default function NicheExplorer() {
         setLoadingSearch(false);
       }
     } finally {
-      if (searchIdRef.current === sid) {
-        setLoadingBatches(false);
-        setBatchProgress(0);
-      }
+      if (searchIdRef.current === sid) setLoadingBatches(false);
     }
   };
 
