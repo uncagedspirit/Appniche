@@ -215,7 +215,6 @@ export default function NicheExplorer() {
   const [searchResult,   setSearchResult]   = useState(null);
   const [allApps,        setAllApps]        = useState([]);
   const [loadingSearch,  setLoadingSearch]  = useState(false);
-  const [loadingBatches, setLoadingBatches] = useState(false);
   const [searchError,    setSearchError]    = useState(null);
   const [filters,        setFilters]        = useState(DEFAULT_FILTERS);
   const [sortKey,        setSortKey]        = useState('default');
@@ -224,7 +223,6 @@ export default function NicheExplorer() {
   const [titleMatchOnly, setTitleMatchOnly] = useState(
     () => localStorage.getItem('titleMatchOnly') !== 'false'
   );
-  const [pagesLoaded, setPagesLoaded] = useState(0);
   const searchIdRef = useRef(0);
 
   // Browse (unchanged)
@@ -274,44 +272,18 @@ export default function NicheExplorer() {
     if (!query.trim()) return;
     const sid = ++searchIdRef.current;
     setSearchResult(null); setAllApps([]); setSearchError(null);
-    setLoadingSearch(true); setLoadingBatches(false); setPagesLoaded(0);
+    setLoadingSearch(true);
     setFilters(DEFAULT_FILTERS); setSortKey('default');
 
     try {
-      const d = await nichesAPI.search(query.trim(), apiCountry, 0);
+      const d = await nichesAPI.search(query.trim(), apiCountry);
       if (searchIdRef.current !== sid) return;
       setSearchResult(d);
-      const seen = new Set((d.apps || []).map(a => a.appId));
       setAllApps(d.apps || []);
-      setPagesLoaded(1);
-      setLoadingSearch(false);
-
-      // Keep fetching the same exact query until no new apps come back
-      setLoadingBatches(true);
-      let page = 1;
-      while (true) {
-        if (searchIdRef.current !== sid) break;
-        try {
-          const bd = await nichesAPI.search(query.trim(), apiCountry, page);
-          if (searchIdRef.current !== sid) break;
-          const fresh = (bd.apps || []).filter(a => {
-            if (seen.has(a.appId)) return false;
-            seen.add(a.appId);
-            return true;
-          });
-          if (!fresh.length) break;
-          setAllApps(prev => [...prev, ...fresh]);
-          setPagesLoaded(p => p + 1);
-          page++;
-        } catch { break; }
-      }
     } catch (err) {
-      if (searchIdRef.current === sid) {
-        setSearchError(err.message);
-        setLoadingSearch(false);
-      }
+      if (searchIdRef.current === sid) setSearchError(err.message);
     } finally {
-      if (searchIdRef.current === sid) setLoadingBatches(false);
+      if (searchIdRef.current === sid) setLoadingSearch(false);
     }
   };
 
@@ -397,7 +369,7 @@ export default function NicheExplorer() {
           )}
 
           {loadingSearch && (
-            <LoadingState message={`Fetching full app data for "${query}"… this takes ~15s on first load`} />
+            <LoadingState message={`Fetching every app for "${query}" across all query variants… this can take a minute.`} />
           )}
           {searchError && <ErrorState message={searchError} onRetry={handleSearch} />}
 
@@ -497,15 +469,7 @@ export default function NicheExplorer() {
                 )}
 
                 <div className="ml-auto flex items-center gap-3">
-                  {loadingBatches && (
-                    <span className="text-xs text-ink-500 flex items-center gap-1.5">
-                      <RefreshCw size={11} className="animate-spin text-acid" />
-                      Fetching page {pagesLoaded + 1}…
-                    </span>
-                  )}
-                  <span className="text-xs text-ink-500">
-                    {filteredApps.length} apps · {pagesLoaded} {pagesLoaded === 1 ? 'page' : 'pages'} fetched
-                  </span>
+                  <span className="text-xs text-ink-500">{filteredApps.length} apps</span>
                   <div className="flex bg-ink-800 border border-ink-700 rounded-lg p-0.5">
                     {[
                       { id: 'table', icon: <Table2 size={13} /> },

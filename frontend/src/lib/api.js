@@ -1,10 +1,10 @@
 import axios from 'axios';
 
-const API_BASE = 'https://appniche-nryr.vercel.app/api';
+const API_BASE = '/api';
 
 const api = axios.create({
   baseURL: API_BASE,
-  timeout: 45000,
+  timeout: 300000,
 });
 
 api.interceptors.response.use(
@@ -40,12 +40,6 @@ export const appsAPI = {
 
   similar: (appId, platform = 'android', country = 'us') =>
     api.get('/apps/similar', { params: { appId, platform, country } }),
-
-  developer: (devId, platform = 'android', country = 'us') =>
-    api.get('/apps/developer', { params: { devId, platform, country } }),
-
-  top: (category, collection = 'TOP_FREE', country = 'us', num = 30) =>
-    api.get('/apps/top', { params: { category, collection, country, num } }),
 };
 
 // Niches
@@ -55,8 +49,8 @@ export const nichesAPI = {
     api.get('/niches/analyze', { params: { category, country } }),
   opportunities: (country = 'us') =>
     api.get('/niches/opportunities', { params: { country } }),
-  search: (q, country = 'us', page = 0) =>
-    api.get('/niches/search', { params: { q, country, page } }),
+  search: (q, country = 'us') =>
+    api.get('/niches/search', { params: { q, country } }),
   checkApps: (ids, country = 'us') =>
     api.get('/niches/check-apps', { params: { ids: ids.join(','), country } }),
 };

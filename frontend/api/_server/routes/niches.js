@@ -204,25 +204,53 @@ router.get('/opportunities', async (req, res) => {
   }
 });
 
-// GET /api/niches/search?q=meditation&country=us&page=0
+// GET /api/niches/search?q=meditation&country=us
+// Fans out across base query + gplay suggestions + alphabet expansion,
+// dedupes by appId, and returns every app it can find for the keyword.
 router.get('/search', async (req, res) => {
-  const { q, country = 'us', lang = 'en', page: pageParam } = req.query;
+  const { q, country = 'us', lang = 'en' } = req.query;
   if (!q?.trim()) return res.status(400).json({ error: 'q is required' });
 
-  const page      = Math.max(0, parseInt(pageParam) || 0);
   const baseQuery = q.trim().toLowerCase();
-  const cacheKey  = `niche-v6:${baseQuery}:${country}:p${page}`;
+  const cacheKey  = `niche-v7:${baseQuery}:${country}`;
   const cached = getCached(cacheKey);
   if (cached) return res.json(cached);
 
   try {
-    const num = 250;
-    const basicApps = await gplay.search({ term: baseQuery, country, lang, num, fullDetail: false });
-    if (!basicApps.length) return res.json({ query: q, apps: [], metrics: null });
+    const searchOne = (term) =>
+      gplay.search({ term, country, lang, num: 250, fullDetail: false }).catch(() => []);
 
-    // Full detail for top 20 in parallel (with per-app 8 s timeout)
+    // Kick off base search and suggestions together
+    const [baseApps, suggestions] = await Promise.all([
+      searchOne(baseQuery),
+      gplay.suggest({ term: baseQuery, country, lang }).catch(() => []),
+    ]);
+
+    // Build variant terms: a–z + 0–9 expansions, plus suggestions that contain the base seed
+    const seed     = baseQuery.split(/\s+/)[0];
+    const variants = new Set();
+    'abcdefghijklmnopqrstuvwxyz0123456789'.split('').forEach(c => variants.add(`${baseQuery} ${c}`));
+    (suggestions || []).forEach(s => {
+      const t = (s || '').toString().trim().toLowerCase();
+      if (t && t !== baseQuery && t.includes(seed)) variants.add(t);
+    });
+
+    const variantResults = await Promise.all([...variants].map(searchOne));
+
+    // Dedupe by appId, base results first so order stays meaningful
+    const seen = new Set();
+    const allBasic = [];
+    for (const app of [...baseApps, ...variantResults.flat()]) {
+      if (!app?.appId || seen.has(app.appId)) continue;
+      seen.add(app.appId);
+      allBasic.push(app);
+    }
+
+    if (!allBasic.length) return res.json({ query: q, apps: [], metrics: null });
+
+    // Full detail for top 30 in parallel (per-app 8 s timeout)
     const detailResults = await Promise.allSettled(
-      basicApps.slice(0, 20).map(app =>
+      allBasic.slice(0, 30).map(app =>
         Promise.race([
           gplay.app({ appId: app.appId, country, lang }),
           new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))
@@ -230,10 +258,9 @@ router.get('/search', async (req, res) => {
       )
     );
 
-    // Merge: full detail where available, fall back to basic
     const merged = [
-      ...detailResults.map((r, i) => r.status === 'fulfilled' ? r.value : basicApps[i]),
-      ...basicApps.slice(20),
+      ...detailResults.map((r, i) => r.status === 'fulfilled' ? r.value : allBasic[i]),
+      ...allBasic.slice(30),
     ];
 
     const now = Date.now();
@@ -318,7 +345,6 @@ router.get('/search', async (req, res) => {
 
     const result = {
       query: q,
-      page,
       totalFound: enriched.length,
       metrics: {
         opportunityScore,
