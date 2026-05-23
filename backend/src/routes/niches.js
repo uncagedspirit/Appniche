@@ -366,13 +366,13 @@ router.get('/check-apps', async (req, res) => {
   const { ids, country = 'us', lang = 'en' } = req.query;
   if (!ids) return res.status(400).json({ error: 'ids is required' });
 
-  const appIds = ids.split(',').map(s => s.trim()).filter(Boolean).slice(0, 25);
+  const appIds = ids.split(',').map(s => s.trim()).filter(Boolean).slice(0, 20);
 
   const results = await Promise.all(appIds.map(async (appId) => {
     try {
       const app = await Promise.race([
         gplay.app({ appId, country, lang }),
-        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000))
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 5000))
       ]);
       return {
         appId,

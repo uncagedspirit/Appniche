@@ -738,9 +738,10 @@ export default function Dashboard() {
   const [metrics,      setMetrics]      = useState(DEFAULT_METRICS);
   const [sort,         setSort]         = useState({ key: 'minInstalls', dir: 'desc' });
   const [view,         setView]         = useState('table');
-  const [strictTitle,  setStrictTitle]  = useState(true);   // title-relevance filter
+  const [strictTitle,  setStrictTitle]  = useState(false);  // OFF by default — show all Google Play results
   const [checkingRemoved, setCheckingRemoved] = useState(false);
   const [checkProgress,   setCheckProgress]   = useState(null);
+  const [checkSummary,    setCheckSummary]    = useState(null); // { live, removed, errors }
 
   // Each new search gets a unique ID so background batches from an old search
   // are ignored if a new search is started before they complete.
@@ -765,6 +766,7 @@ export default function Dashboard() {
     setApps([]);
     setCurrentBatch(-1);
     setCheckProgress(null);
+    setCheckSummary(null);
     setLoadingMore(false);
 
     try {
@@ -827,17 +829,32 @@ export default function Dashboard() {
   async function checkRemoved() {
     if (checkingRemoved || !apps.length) return;
     setCheckingRemoved(true);
+    setCheckSummary(null);
     const ids = apps.map(a => a.appId);
     setCheckProgress({ done: 0, total: ids.length });
-    for (let i = 0; i < ids.length; i += 25) {
+
+    let liveN = 0, removedN = 0, errorN = 0;
+
+    for (let i = 0; i < ids.length; i += 15) {
       try {
-        const data = await nichesAPI.checkApps(ids.slice(i, i + 25), country);
+        const data = await nichesAPI.checkApps(ids.slice(i, i + 15), country);
         const map = {};
-        (data.results || []).forEach(r => { map[r.appId] = r.status; });
+        (data.results || []).forEach(r => {
+          map[r.appId] = r.status;
+          if (r.status === 'live')    liveN++;
+          else if (r.status === 'removed') removedN++;
+          else                             errorN++;
+        });
         setApps(prev => prev.map(a => map[a.appId] ? { ...a, _status: map[a.appId] } : a));
-      } catch {}
-      setCheckProgress({ done: Math.min(i + 25, ids.length), total: ids.length });
+      } catch (err) {
+        // batch failed — mark as errors but keep going
+        errorN += Math.min(15, ids.length - i);
+        console.warn('checkApps batch failed:', err?.message);
+      }
+      setCheckProgress({ done: Math.min(i + 15, ids.length), total: ids.length });
     }
+
+    setCheckSummary({ live: liveN, removed: removedN, errors: errorN });
     setCheckingRemoved(false);
   }
 
@@ -974,23 +991,39 @@ export default function Dashboard() {
           <button onClick={() => setFilters(FILTER_DEFAULTS)} className="flex items-center gap-1 text-xs text-slate-500 hover:text-red-500 transition-colors"><X size={11}/> Clear</button>
         )}
 
-        {/* Title-only toggle */}
-        <label className="flex items-center gap-1.5 cursor-pointer select-none ml-1" title="Show only apps whose title contains your search term">
+        {/* Title-only toggle — when ON, only apps whose title contains the search
+            term are shown. Useful for "puzzle" (filter out Candy Crush), but
+            should be OFF for niches like "meditation" where top apps (Calm,
+            Headspace) don't have the keyword in their name. */}
+        <label className="flex items-center gap-1.5 cursor-pointer select-none ml-1"
+          title={strictTitle ? 'Title filter ON — only apps with keyword in their name are shown. Turn off to see all Google Play results.' : 'Title filter OFF — showing all Google Play results. Turn on to see only apps whose name contains the keyword.'}>
           <input type="checkbox" checked={strictTitle} onChange={e => setStrictTitle(e.target.checked)}
             className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"/>
-          <span className="text-xs font-medium text-slate-600">Title only</span>
+          <span className={clsx('text-xs font-medium', strictTitle ? 'text-blue-700' : 'text-slate-500')}>
+            Title only {strictTitle ? '●' : ''}
+          </span>
         </label>
 
         <Sep/>
 
         {/* Check removed */}
-        <button onClick={checkRemoved} disabled={checkingRemoved}
-          className={clsx('flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg border transition-colors',
-            checkingRemoved ? 'bg-orange-50 border-orange-200 text-orange-600 cursor-wait' : 'bg-white border-slate-200 text-slate-600 hover:bg-red-50 hover:border-red-200 hover:text-red-600')}>
-          {checkingRemoved
-            ? <><MiniSpin/>{checkProgress ? `${checkProgress.done}/${checkProgress.total}` : '…'}</>
-            : <><AlertCircle size={13}/>Check Removed</>}
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={checkRemoved} disabled={checkingRemoved}
+            className={clsx('flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg border transition-colors',
+              checkingRemoved ? 'bg-orange-50 border-orange-200 text-orange-600 cursor-wait' : 'bg-white border-slate-200 text-slate-600 hover:bg-red-50 hover:border-red-200 hover:text-red-600')}>
+            {checkingRemoved
+              ? <><MiniSpin/>{checkProgress ? `${checkProgress.done}/${checkProgress.total} checking…` : '…'}</>
+              : <><AlertCircle size={13}/>Check Removed</>}
+          </button>
+          {/* Result summary shown after check completes */}
+          {checkSummary && !checkingRemoved && (
+            <span className="text-xs flex items-center gap-1.5 font-medium">
+              <span className="text-green-600">{checkSummary.live} live</span>
+              {checkSummary.removed > 0 && <span className="text-red-600 font-bold">{checkSummary.removed} removed</span>}
+              {checkSummary.errors  > 0 && <span className="text-slate-400">{checkSummary.errors} err</span>}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* ── STATS BAR (AppStoreSpy-style prominent numbers) ── */}
