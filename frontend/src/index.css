@@ -130,3 +130,15 @@
 .react-hot-toast {
   font-family: 'DM Sans', sans-serif !important;
 }
+
+/* Market Explorer — styled horizontal scrollbar */
+.market-scroll::-webkit-scrollbar        { height: 6px; width: 6px; }
+.market-scroll::-webkit-scrollbar-track  { background: #f1f5f9; border-radius: 99px; }
+.market-scroll::-webkit-scrollbar-thumb  { background: #94a3b8; border-radius: 99px; }
+.market-scroll::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+/* Screenshots strip */
+.screenshots-scroll::-webkit-scrollbar        { height: 5px; }
+.screenshots-scroll::-webkit-scrollbar-track  { background: #f8fafc; border-radius: 99px; }
+.screenshots-scroll::-webkit-scrollbar-thumb  { background: #cbd5e1; border-radius: 99px; }
+.screenshots-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
