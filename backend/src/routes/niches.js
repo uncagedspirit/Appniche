@@ -207,16 +207,17 @@ router.get('/opportunities', async (req, res) => {
 // GET /api/niches/search?q=meditation&country=us
 // Deep keyword niche analysis with full ASO data
 router.get('/search', async (req, res) => {
-  const { q, country = 'us', lang = 'en' } = req.query;
+  const { q, country = 'us', lang = 'en', num: numParam } = req.query;
   if (!q?.trim()) return res.status(400).json({ error: 'q is required' });
 
-  const cacheKey = `niche-v4:${q.toLowerCase().trim()}:${country}`;
+  const fetchNum  = Math.min(250, Math.max(10, parseInt(numParam) || 250));
+  const cacheKey  = `niche-v4:${q.toLowerCase().trim()}:${country}:${fetchNum}`;
   const cached = getCached(cacheKey);
   if (cached) return res.json(cached);
 
   try {
-    // Fast search — fetch up to 250 apps (max Google Play returns per query)
-    const basicApps = await gplay.search({ term: q, country, lang, num: 250, fullDetail: false });
+    // Fast search — fetch up to fetchNum apps (max 250 per Google Play query)
+    const basicApps = await gplay.search({ term: q, country, lang, num: fetchNum, fullDetail: false });
     if (!basicApps.length) return res.json({ query: q, apps: [], metrics: null });
 
     // Full detail for top 20 in parallel (with per-app 8 s timeout)
@@ -280,9 +281,13 @@ router.get('/search', async (req, res) => {
         screenshotCount: (app.screenshots || []).length,
         screenshotUrls:  (app.screenshots || []).slice(0, 10),
         hasVideo:        !!(app.video),
-        titleLength:     (app.title       || '').length,
+        titleLength:       (app.title       || '').length,
         descriptionLength: (app.description || '').length,
+        descriptionSnippet: app.description
+          ? app.description.substring(0, 200) + (app.description.length > 200 ? '…' : '')
+          : null,
         summaryLength:   (app.summary || '').length,
+        summaryText:     app.summary || null,
         histogram:       app.histogram || null,
         asoScore:        computeASOScore(app),
         revenueEstimate: estimateRevenue(app),
