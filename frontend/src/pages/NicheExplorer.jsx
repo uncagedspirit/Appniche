@@ -199,9 +199,8 @@ function applyKeywordFilter(apps, query, enabled) {
   );
   if (!words.length) return apps;
   return apps.filter(app => {
-    const title   = (app.title       || '').toLowerCase();
-    const summary = (app.summaryText || '').toLowerCase();
-    return words.some(w => title.includes(w) || summary.includes(w));
+    const title = (app.title || '').toLowerCase();
+    return words.some(w => title.includes(w));
   });
 }
 
