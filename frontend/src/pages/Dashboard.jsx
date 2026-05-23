@@ -908,7 +908,7 @@ export default function Dashboard() {
             {[
               { icon: Package,          t: 'Up to 1 500 apps fetched',   d: '6 search batches × 250 results, deduplicated — far more than a single search.' },
               { icon: SlidersHorizontal, t: 'Pick your columns',          d: 'Choose from 60+ metrics. Drag to reorder. Available data shows live.' },
-              { icon: Zap,              t: 'Exact title matching',        d: 'Title-only filter shows only apps truly in your niche, not Google's ranking noise.' },
+              { icon: Zap,              t: 'Exact title matching',        d: "Title-only filter shows only apps truly in your niche, not Google's ranking noise." },
             ].map(({ icon: Icon, t, d }) => (
               <div key={t} className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                 <Icon size={16} className="text-blue-600 mb-2"/>
