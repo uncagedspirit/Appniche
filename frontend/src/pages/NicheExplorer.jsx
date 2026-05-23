@@ -273,6 +273,7 @@ export default function NicheExplorer() {
     setFilters(DEFAULT_FILTERS); setSortKey('default');
 
     try {
+      // Batch 0 — exact query, show results immediately
       const d = await nichesAPI.search(query.trim(), country, 0);
       if (searchIdRef.current !== sid) return;
       setSearchResult(d);
@@ -280,12 +281,21 @@ export default function NicheExplorer() {
       setAllApps(d.apps || []);
       setLoadingSearch(false);
 
+      // Fetch Play Store keyword suggestions for this query (dynamic, no hardcoding)
+      let suggestions = [];
+      try {
+        const s = await keywordsAPI.suggest(query.trim(), country);
+        suggestions = (s.play || []).slice(0, 5);
+      } catch { /* suggestions optional */ }
+
+      // Search each suggestion to surface apps from different parts of the index
+      const extraQueries = suggestions.length ? suggestions : [];
       setLoadingBatches(true);
-      for (let batch = 1; batch <= 5; batch++) {
+      for (let i = 0; i < extraQueries.length; i++) {
         if (searchIdRef.current !== sid) break;
-        setBatchProgress(batch);
+        setBatchProgress(i + 1);
         try {
-          const bd = await nichesAPI.search(query.trim(), country, batch);
+          const bd = await nichesAPI.search(extraQueries[i], country, 0);
           if (searchIdRef.current !== sid) break;
           const fresh = (bd.apps || []).filter(a => {
             if (seen.has(a.appId)) return false;
@@ -293,7 +303,7 @@ export default function NicheExplorer() {
             return true;
           });
           if (fresh.length) setAllApps(prev => [...prev, ...fresh]);
-        } catch { /* skip failed batches, continue loop */ }
+        } catch { /* skip, continue */ }
       }
     } catch (err) {
       if (searchIdRef.current === sid) {
@@ -502,7 +512,7 @@ export default function NicheExplorer() {
                   {loadingBatches && (
                     <span className="text-xs text-ink-500 flex items-center gap-1.5">
                       <RefreshCw size={11} className="animate-spin text-acid" />
-                      Loading batch {batchProgress}/5…
+                      Loading more results…
                     </span>
                   )}
                   <span className="text-xs text-ink-500">
