@@ -10,22 +10,22 @@ export default {
       },
       colors: {
         ink: {
-          DEFAULT: '#0a0a0a',
-          50: '#f5f5f4',
-          100: '#e8e8e6',
-          200: '#d1d1cd',
-          300: '#a8a8a2',
-          400: '#7a7a74',
-          500: '#5a5a55',
-          600: '#3d3d39',
-          700: '#2a2a27',
-          800: '#1a1a18',
-          900: '#0a0a0a',
+          DEFAULT: '#0f172a',
+          50:  '#0f172a',   // darkest — headings
+          100: '#1e293b',   // dark body text
+          200: '#334155',   // secondary text
+          300: '#475569',   // tertiary text
+          400: '#64748b',   // muted text
+          500: '#94a3b8',   // placeholder / very muted
+          600: '#cbd5e1',   // light borders
+          700: '#e2e8f0',   // borders
+          800: '#f1f5f9',   // card / input backgrounds
+          900: '#ffffff',   // page background
         },
         acid: {
-          DEFAULT: '#c8f135',
-          dark: '#a8cf1a',
-          light: '#dffb6a',
+          DEFAULT: '#1d6ef6',   // blue accent
+          dark:    '#1558d0',
+          light:   '#5b9bfa',
         }
       },
       animation: {

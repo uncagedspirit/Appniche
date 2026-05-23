@@ -15,15 +15,16 @@ export function PageHeader({ title, subtitle, action }) {
 export function ScoreRing({ score, size = 'md', label }) {
   const sizes = { sm: 'w-10 h-10 text-sm', md: 'w-14 h-14 text-base', lg: 'w-20 h-20 text-xl' };
   const s = score ?? 0;
-  const color = s >= 70 ? 'text-green-400 border-green-400/40' :
-                s >= 40 ? 'text-yellow-400 border-yellow-400/40' : 'text-red-400 border-red-400/40';
+  const color = s >= 70 ? 'text-green-700 border-green-300 bg-green-50' :
+                s >= 40 ? 'text-amber-700 border-amber-300 bg-amber-50' :
+                          'text-red-700   border-red-300   bg-red-50';
 
   return (
     <div className="flex flex-col items-center gap-1">
       <div className={clsx('score-ring border-2 font-display font-700', sizes[size], color)}>
         {s}
       </div>
-      {label && <span className="text-xs text-ink-500">{label}</span>}
+      {label && <span className="text-xs text-ink-400">{label}</span>}
     </div>
   );
 }
@@ -34,7 +35,7 @@ export function Stars({ score }) {
   return (
     <div className="flex items-center gap-0.5">
       {[1,2,3,4,5].map(i => (
-        <span key={i} className={i <= filled ? 'text-yellow-400' : 'text-ink-600'} style={{fontSize:'11px'}}>★</span>
+        <span key={i} className={i <= filled ? 'text-amber-500' : 'text-ink-600'} style={{fontSize:'11px'}}>★</span>
       ))}
       <span className="text-xs text-ink-400 ml-1">{s.toFixed(1)}</span>
     </div>
@@ -60,10 +61,10 @@ export function LoadingState({ message = 'Loading...' }) {
 export function EmptyState({ icon: Icon, title, subtitle, action }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
-      {Icon && <Icon size={32} className="text-ink-600" />}
+      {Icon && <Icon size={32} className="text-ink-500" />}
       <div>
         <p className="text-ink-300 font-medium">{title}</p>
-        {subtitle && <p className="text-sm text-ink-500 mt-1">{subtitle}</p>}
+        {subtitle && <p className="text-sm text-ink-400 mt-1">{subtitle}</p>}
       </div>
       {action}
     </div>
@@ -73,12 +74,12 @@ export function EmptyState({ icon: Icon, title, subtitle, action }) {
 export function ErrorState({ message, onRetry }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
-      <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
-        <span className="text-red-400 text-lg">!</span>
+      <div className="w-10 h-10 rounded-full bg-red-50 border border-red-200 flex items-center justify-center">
+        <span className="text-red-600 text-lg font-bold">!</span>
       </div>
       <div>
-        <p className="text-ink-300 font-medium">Something went wrong</p>
-        <p className="text-sm text-ink-500 mt-1">{message}</p>
+        <p className="text-ink-200 font-medium">Something went wrong</p>
+        <p className="text-sm text-ink-400 mt-1">{message}</p>
       </div>
       {onRetry && (
         <button onClick={onRetry} className="btn-secondary text-xs">Try again</button>
@@ -93,26 +94,28 @@ export function AppCard({ app, onClick, selected }) {
       onClick={() => onClick?.(app)}
       className={clsx(
         'flex items-center gap-3 p-3 rounded-xl border transition-all duration-100',
-        selected ? 'border-acid/40 bg-acid/5' : 'border-ink-700 bg-ink-800 hover:border-ink-500 cursor-pointer'
+        selected
+          ? 'border-blue-300 bg-blue-50 shadow-sm'
+          : 'border-ink-700 bg-ink-900 hover:border-ink-600 hover:shadow-sm cursor-pointer'
       )}
     >
       <img
         src={app.icon}
         alt={app.title}
-        className="w-10 h-10 rounded-xl flex-shrink-0 bg-ink-700"
-        onError={e => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(app.title)}&background=2a2a27&color=a8a8a2&size=40`; }}
+        className="w-10 h-10 rounded-xl flex-shrink-0 bg-ink-800"
+        onError={e => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(app.title)}&background=e2e8f0&color=475569&size=40`; }}
       />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-ink-100 truncate">{app.title}</p>
-        <p className="text-xs text-ink-500 truncate">{app.developer}</p>
+        <p className="text-xs text-ink-400 truncate">{app.developer}</p>
       </div>
       <div className="flex flex-col items-end gap-1">
         <div className="flex items-center gap-0.5">
-          <span className="text-yellow-400 text-xs">★</span>
+          <span className="text-amber-500 text-xs">★</span>
           <span className="text-xs text-ink-300">{(app.score || 0).toFixed(1)}</span>
         </div>
         {app.installs && (
-          <span className="text-xs text-ink-500">{app.installs}</span>
+          <span className="text-xs text-ink-400">{app.installs}</span>
         )}
       </div>
     </div>
@@ -120,22 +123,22 @@ export function AppCard({ app, onClick, selected }) {
 }
 
 export function KeywordBadge({ keyword, score, difficulty, onClick }) {
-  const diffColor = !difficulty ? 'border-ink-700 text-ink-300' :
-    difficulty < 40 ? 'border-green-500/30 text-green-400 bg-green-500/5' :
-    difficulty < 70 ? 'border-yellow-500/30 text-yellow-400 bg-yellow-500/5' :
-    'border-red-500/30 text-red-400 bg-red-500/5';
+  const diffColor = !difficulty ? 'border-ink-700 text-ink-300 bg-ink-800' :
+    difficulty < 40 ? 'border-green-300 text-green-700 bg-green-50' :
+    difficulty < 70 ? 'border-amber-300 text-amber-700 bg-amber-50' :
+    'border-red-300 text-red-700 bg-red-50';
 
   return (
     <button
       onClick={() => onClick?.(keyword)}
       className={clsx(
-        'inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-all hover:brightness-110',
+        'inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-all hover:shadow-sm',
         diffColor
       )}
     >
       <span>{keyword}</span>
       {difficulty !== undefined && (
-        <span className="text-xs opacity-60">{difficulty}</span>
+        <span className="text-xs opacity-70">{difficulty}</span>
       )}
     </button>
   );
@@ -174,7 +177,7 @@ export function PlatformToggle({ value, onChange }) {
           onClick={() => onChange(p)}
           className={clsx(
             'px-3 py-1.5 rounded-md text-xs font-medium transition-all',
-            value === p ? 'bg-ink-700 text-ink-100' : 'text-ink-500 hover:text-ink-300'
+            value === p ? 'bg-ink-900 text-ink-100 shadow-sm' : 'text-ink-400 hover:text-ink-200'
           )}
         >
           {p === 'android' ? '🤖 Android' : '🍎 iOS'}
@@ -189,7 +192,7 @@ export function StatCard({ label, value, sub, accent }) {
     <div className="card">
       <p className="section-label mb-2">{label}</p>
       <p className={clsx('font-display text-2xl font-700', accent ? 'text-acid' : 'text-ink-50')}>{value}</p>
-      {sub && <p className="text-xs text-ink-500 mt-1">{sub}</p>}
+      {sub && <p className="text-xs text-ink-400 mt-1">{sub}</p>}
     </div>
   );
 }
@@ -205,12 +208,12 @@ export function TabBar({ tabs, active, onChange }) {
             'px-4 py-3 text-sm font-medium border-b-2 transition-all -mb-px',
             active === t.id
               ? 'border-acid text-acid'
-              : 'border-transparent text-ink-500 hover:text-ink-300'
+              : 'border-transparent text-ink-400 hover:text-ink-200'
           )}
         >
           {t.label}
           {t.count !== undefined && (
-            <span className="ml-2 text-xs bg-ink-700 text-ink-400 px-1.5 py-0.5 rounded-full">{t.count}</span>
+            <span className="ml-2 text-xs bg-ink-800 text-ink-400 px-1.5 py-0.5 rounded-full">{t.count}</span>
           )}
         </button>
       ))}

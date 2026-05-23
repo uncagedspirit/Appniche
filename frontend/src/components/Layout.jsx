@@ -1,66 +1,77 @@
 import { Outlet, NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Search, Compass, Smartphone,
-  Lightbulb, Zap, Bookmark, ChevronRight
+  Lightbulb, Zap, Bookmark
 } from 'lucide-react';
 import clsx from 'clsx';
 
 const NAV = [
-  { to: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/app/keywords', label: 'Keywords', icon: Search },
-  { to: '/app/niches', label: 'Niches', icon: Compass },
-  { to: '/app/analyzer', label: 'App Analyzer', icon: Smartphone },
-  { to: '/app/ideas', label: 'Idea Generator', icon: Lightbulb },
-  { to: '/app/aso', label: 'ASO Optimizer', icon: Zap },
-  { to: '/app/saved', label: 'Saved', icon: Bookmark },
+  { to: '/app',          label: 'Market Explorer', icon: LayoutDashboard, end: true },
+  { to: '/app/keywords', label: 'Keywords',         icon: Search },
+  { to: '/app/niches',   label: 'Niche Finder',     icon: Compass },
+  { to: '/app/analyzer', label: 'App Analyzer',     icon: Smartphone },
+  { to: '/app/ideas',    label: 'Idea Generator',   icon: Lightbulb },
+  { to: '/app/aso',      label: 'ASO Optimizer',    icon: Zap },
+  { to: '/app/saved',    label: 'Saved',             icon: Bookmark },
 ];
 
 export default function Layout() {
   return (
-    <div className="flex h-screen bg-ink-900 overflow-hidden">
+    <div className="flex h-screen bg-slate-50 overflow-hidden">
+
       {/* Sidebar */}
-      <aside className="w-56 flex-shrink-0 flex flex-col border-r border-ink-800 bg-ink-900">
+      <aside className="w-56 flex-shrink-0 flex flex-col bg-white border-r border-slate-200 shadow-sm">
+
         {/* Logo */}
-        <div className="px-5 py-5 border-b border-ink-800">
+        <div className="px-5 py-4 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 bg-acid rounded-lg flex items-center justify-center">
-              <span className="font-display font-800 text-ink-900 text-xs">AN</span>
+            <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm">
+              <span className="font-bold text-white text-xs leading-none">AN</span>
             </div>
-            <span className="font-display font-700 text-ink-50 text-base">AppNiche</span>
+            <span className="font-bold text-slate-800 text-base tracking-tight">AppNiche</span>
           </div>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto no-scrollbar">
+        <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto no-scrollbar">
           {NAV.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
               end={end}
               className={({ isActive }) => clsx(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-100 group',
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-100',
                 isActive
-                  ? 'bg-acid/15 text-acid'
-                  : 'text-ink-400 hover:text-ink-100 hover:bg-ink-800'
+                  ? 'bg-blue-50 text-blue-700 font-semibold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               )}
             >
               {({ isActive }) => (
                 <>
-                  <Icon size={15} className={isActive ? 'text-acid' : 'text-ink-500 group-hover:text-ink-300'} />
+                  <Icon
+                    size={15}
+                    className={isActive ? 'text-blue-600' : 'text-slate-400'}
+                    strokeWidth={isActive ? 2.5 : 2}
+                  />
                   {label}
-                  {isActive && <ChevronRight size={12} className="ml-auto text-acid/60" />}
                 </>
               )}
             </NavLink>
           ))}
         </nav>
 
+        {/* Footer */}
+        <div className="px-5 py-3 border-t border-slate-100">
+          <p className="text-[11px] text-slate-400 font-medium">AppNiche v2.0</p>
+        </div>
+
       </aside>
 
-      {/* Main */}
+      {/* Main content */}
       <main className="flex-1 overflow-y-auto">
         <Outlet />
       </main>
+
     </div>
   );
 }

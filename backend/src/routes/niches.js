@@ -210,18 +210,18 @@ router.get('/search', async (req, res) => {
   const { q, country = 'us', lang = 'en' } = req.query;
   if (!q?.trim()) return res.status(400).json({ error: 'q is required' });
 
-  const cacheKey = `niche-v2:${q.toLowerCase().trim()}:${country}`;
+  const cacheKey = `niche-v3:${q.toLowerCase().trim()}:${country}`;
   const cached = getCached(cacheKey);
   if (cached) return res.json(cached);
 
   try {
-    // Fast search (basic data for all 30)
-    const basicApps = await gplay.search({ term: q, country, lang, num: 30, fullDetail: false });
+    // Fast search — fetch up to 100 apps (basic data only, one request)
+    const basicApps = await gplay.search({ term: q, country, lang, num: 100, fullDetail: false });
     if (!basicApps.length) return res.json({ query: q, apps: [], metrics: null });
 
-    // Full detail for top 15 in parallel (with per-app timeout)
+    // Full detail for top 20 in parallel (with per-app 8 s timeout)
     const detailResults = await Promise.allSettled(
-      basicApps.slice(0, 15).map(app =>
+      basicApps.slice(0, 20).map(app =>
         Promise.race([
           gplay.app({ appId: app.appId, country, lang }),
           new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))
@@ -232,7 +232,7 @@ router.get('/search', async (req, res) => {
     // Merge: full detail where available, fall back to basic
     const merged = [
       ...detailResults.map((r, i) => r.status === 'fulfilled' ? r.value : basicApps[i]),
-      ...basicApps.slice(15),
+      ...basicApps.slice(20),
     ];
 
     const now = Date.now();
@@ -243,6 +243,11 @@ router.get('/search', async (req, res) => {
       const daysSinceUpdate  = updatedDate  ? Math.floor((now - updatedDate.getTime())  / 86400000) : null;
       const daysSinceRelease = releasedDate ? Math.floor((now - releasedDate.getTime()) / 86400000) : null;
       const minInst = app.minInstalls || parseInstalls(app.installs);
+
+      // Install velocity estimates
+      const dailyInstalls   = (daysSinceRelease && daysSinceRelease > 0)
+        ? Math.round(minInst / daysSinceRelease) : null;
+      const monthlyInstalls = dailyInstalls ? dailyInstalls * 30 : null;
 
       return {
         appId:           app.appId,
@@ -270,6 +275,8 @@ router.get('/search', async (req, res) => {
         updated:         app.updated  || null,
         daysSinceUpdate,
         daysSinceRelease,
+        dailyInstalls,
+        monthlyInstalls,
         screenshotCount: (app.screenshots || []).length,
         hasVideo:        !!(app.video),
         titleLength:     (app.title       || '').length,
