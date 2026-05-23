@@ -192,8 +192,8 @@ function countActiveFilters(f) {
 
 // ── keyword title filter ──────────────────────────────────────────────────────
 
-function applyKeywordFilter(apps, query) {
-  if (!query) return apps;
+function applyKeywordFilter(apps, query, enabled) {
+  if (!enabled || !query) return apps;
   const words = query.trim().toLowerCase().split(/\s+/).filter(w => w.length > 1);
   if (!words.length) return apps;
   return apps.filter(app => {
@@ -222,6 +222,7 @@ export default function NicheExplorer() {
   const [sortKey,        setSortKey]        = useState('default');
   const [showFilters,    setShowFilters]    = useState(false);
   const [viewMode,       setViewMode]       = useState('table');
+  const [titleMatchOnly, setTitleMatchOnly] = useState(true);
   const searchIdRef = useRef(0);
 
   // Browse (unchanged)
@@ -335,7 +336,7 @@ export default function NicheExplorer() {
     finally { setLoadingRemoved(false); }
   };
 
-  const keywordFiltered = applyKeywordFilter(allApps, query);
+  const keywordFiltered = applyKeywordFilter(allApps, query, titleMatchOnly);
   const filteredApps    = applySort(applyFilters(keywordFiltered, filters), sortKey);
   const activeFilters = countActiveFilters(filters);
 
@@ -488,7 +489,15 @@ export default function NicheExplorer() {
                   )}
                 </button>
 
-<select value={sortKey} onChange={e => setSortKey(e.target.value)} className="select text-sm">
+                <button onClick={() => setTitleMatchOnly(p => !p)}
+                  className={clsx('flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm transition-all',
+                    titleMatchOnly ? 'border-acid/40 bg-acid/10 text-acid' : 'border-ink-700 text-ink-400 hover:text-ink-200'
+                  )}>
+                  <Search size={13} />
+                  Title match {titleMatchOnly ? 'ON' : 'OFF'}
+                </button>
+
+                <select value={sortKey} onChange={e => setSortKey(e.target.value)} className="select text-sm">
                   {SORT_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
 
