@@ -208,6 +208,7 @@ export default function NicheExplorer() {
   const [searchParams] = useSearchParams();
   const { country, setCountry } = useSettings();
   const [mode, setMode] = useState('finder');
+  const apiCountry = country === 'all' ? 'us' : country;
 
   // Finder
   const [query,          setQuery]          = useState('');
@@ -246,16 +247,21 @@ export default function NicheExplorer() {
     if (cat) { setMode('browse'); handleSelectCategory(cat); }
   }, [country]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Re-run search when country changes if there's an active search
+  useEffect(() => {
+    if (query.trim() && searchResult) handleSearch();
+  }, [country]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const loadOpportunities = async () => {
     setLoadingOpp(true);
-    try { const d = await nichesAPI.opportunities(country); setOpportunities(d || []); }
+    try { const d = await nichesAPI.opportunities(apiCountry); setOpportunities(d || []); }
     catch (e) { setBrowseError(e.message); }
     finally { setLoadingOpp(false); }
   };
 
   const handleSelectCategory = async (cat) => {
     setSelected(cat); setNicheData(null); setLoadingNiche(true); setBrowseError(null);
-    try { const d = await nichesAPI.analyze(cat, country); setNicheData(d); setBrowseTab('top_free'); }
+    try { const d = await nichesAPI.analyze(cat, apiCountry); setNicheData(d); setBrowseTab('top_free'); }
     catch (e) { setBrowseError(e.message); }
     finally { setLoadingNiche(false); }
   };
@@ -270,7 +276,7 @@ export default function NicheExplorer() {
 
     try {
       // Batch 0 — exact query, show results immediately
-      const d = await nichesAPI.search(query.trim(), country, 0);
+      const d = await nichesAPI.search(query.trim(), apiCountry, 0);
       if (searchIdRef.current !== sid) return;
       setSearchResult(d);
       const seen = new Set((d.apps || []).map(a => a.appId));
@@ -280,7 +286,7 @@ export default function NicheExplorer() {
       // Build queue: suggestions + alphabet expansions (a-z) — keeps going until exhausted
       let suggestions = [];
       try {
-        const s = await keywordsAPI.suggest(query.trim(), country);
+        const s = await keywordsAPI.suggest(query.trim(), apiCountry);
         suggestions = s.play || [];
       } catch {}
 
@@ -296,7 +302,7 @@ export default function NicheExplorer() {
         if (searchIdRef.current !== sid) break;
         if (emptyRuns >= 5) break; // stop after 5 consecutive searches with no new apps
         try {
-          const bd = await nichesAPI.search(item.q, country, item.batch);
+          const bd = await nichesAPI.search(item.q, apiCountry, item.batch);
           if (searchIdRef.current !== sid) break;
           const fresh = (bd.apps || []).filter(a => {
             if (seen.has(a.appId)) return false;
@@ -324,7 +330,7 @@ export default function NicheExplorer() {
     const ids = removedInput.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
     if (!ids.length) return;
     setRemovedResults(null); setRemovedError(null); setLoadingRemoved(true);
-    try { const d = await nichesAPI.checkApps(ids, country); setRemovedResults(d.results); }
+    try { const d = await nichesAPI.checkApps(ids, apiCountry); setRemovedResults(d.results); }
     catch (e) { setRemovedError(e.message); }
     finally { setLoadingRemoved(false); }
   };

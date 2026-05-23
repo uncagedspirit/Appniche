@@ -146,6 +146,7 @@ export function KeywordBadge({ keyword, score, difficulty, onClick }) {
 
 export function CountrySelect({ value, onChange }) {
   const countries = [
+    { code: 'all', name: '🌍 All Countries' },
     { code: 'us', name: '🇺🇸 US' },
     { code: 'gb', name: '🇬🇧 UK' },
     { code: 'in', name: '🇮🇳 India' },
@@ -160,7 +161,7 @@ export function CountrySelect({ value, onChange }) {
     { code: 'id', name: '🇮🇩 Indonesia' },
   ];
   return (
-    <select value={value} onChange={e => onChange(e.target.value)} className="select text-sm w-32">
+    <select value={value} onChange={e => onChange(e.target.value)} className="select text-sm w-36">
       {countries.map(c => (
         <option key={c.code} value={c.code}>{c.name}</option>
       ))}

@@ -4,7 +4,7 @@ const SettingsContext = createContext(null);
 
 export function SettingsProvider({ children }) {
   const [country, setCountryState] = useState(
-    () => localStorage.getItem('appniche_country') || 'us'
+    () => localStorage.getItem('appniche_country') || 'all'
   );
 
   const setCountry = (c) => {
