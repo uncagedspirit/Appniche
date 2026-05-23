@@ -318,7 +318,7 @@ router.get('/search', async (req, res) => {
 
     const result = {
       query: q,
-      batch: batchIndex,
+      page,
       totalFound: enriched.length,
       metrics: {
         opportunityScore,
