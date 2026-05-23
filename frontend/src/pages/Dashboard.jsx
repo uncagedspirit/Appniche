@@ -1,15 +1,15 @@
-import { useState, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import { nichesAPI } from '../lib/api.js';
 import clsx from 'clsx';
 import {
   Search, SlidersHorizontal, ChevronUp, ChevronDown, X,
   LayoutGrid, AlignJustify, Table2, GripVertical, Lock,
-  Star, Calendar, RefreshCw, DollarSign, TrendingUp, Zap,
-  ExternalLink, Package, AlertCircle, Settings2,
+  Star, Calendar, DollarSign, TrendingUp, Zap,
+  ExternalLink, Package, AlertCircle, Settings2, RefreshCw,
 } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 1.  COMPLETE METRIC CATALOGUE (every metric the user requested)
+// 1.  COMPLETE METRIC CATALOGUE
 // ─────────────────────────────────────────────────────────────────────────────
 const METRIC_GROUPS = [
   {
@@ -46,33 +46,33 @@ const METRIC_GROUPS = [
   {
     group: 'Performance',
     items: [
-      { id: 'dailyInstalls',      label: 'Daily Installs',          avail: true  },
-      { id: 'minInstalls',        label: 'Installs Google',         avail: true  },
-      { id: 'monthlyInstalls',    label: 'Monthly Installs',        avail: true  },
-      { id: 'revenueEstimate',    label: 'Monthly Revenue',         avail: true  },
-      { id: 'asoScore',           label: 'ASO Score',               avail: true  },
-      { id: 'totalInstalls',      label: 'Total Installs',          avail: true  },
-      { id: 'installsByCountry',  label: 'Installs by Country',     avail: false },
-      { id: 'revenueByCountry',   label: 'Revenue by Country',      avail: false },
-      { id: 'activeCountries',    label: 'Active Countries',        avail: false },
-      { id: 'topFree',            label: 'Top Free',                avail: false },
-      { id: 'topGrossing',        label: 'Top Grossing',            avail: false },
-      { id: 'topPaid',            label: 'Top Paid',                avail: false },
-      { id: 'topNewFree',         label: 'Top New Free',            avail: false },
-      { id: 'topTrending',        label: 'Top Trending',            avail: false },
-      { id: 'topNewPaid',         label: 'Top New Paid',            avail: false },
-      { id: 'dailyInstallChart',  label: 'Daily Install Chart',     avail: false },
-      { id: 'monthlyRevChart',    label: 'Monthly Revenue Chart',   avail: false },
-      { id: 'monthlyInstChart',   label: 'Monthly Installs Chart',  avail: false },
+      { id: 'dailyInstalls',      label: 'Daily Installs',         avail: true  },
+      { id: 'minInstalls',        label: 'Installs Google',        avail: true  },
+      { id: 'monthlyInstalls',    label: 'Monthly Installs',       avail: true  },
+      { id: 'revenueEstimate',    label: 'Monthly Revenue',        avail: true  },
+      { id: 'asoScore',           label: 'ASO Score',              avail: true  },
+      { id: 'totalInstalls',      label: 'Total Installs',         avail: true  },
+      { id: 'installsByCountry',  label: 'Installs by Country',    avail: false },
+      { id: 'revenueByCountry',   label: 'Revenue by Country',     avail: false },
+      { id: 'activeCountries',    label: 'Active Countries',       avail: false },
+      { id: 'topFree',            label: 'Top Free',               avail: false },
+      { id: 'topGrossing',        label: 'Top Grossing',           avail: false },
+      { id: 'topPaid',            label: 'Top Paid',               avail: false },
+      { id: 'topNewFree',         label: 'Top New Free',           avail: false },
+      { id: 'topTrending',        label: 'Top Trending',           avail: false },
+      { id: 'topNewPaid',         label: 'Top New Paid',           avail: false },
+      { id: 'dailyInstallChart',  label: 'Daily Install Chart',    avail: false },
+      { id: 'monthlyRevChart',    label: 'Monthly Revenue Chart',  avail: false },
+      { id: 'monthlyInstChart',   label: 'Monthly Installs Chart', avail: false },
     ],
   },
   {
     group: 'Releases',
     items: [
-      { id: 'released',    label: 'Release Date',  avail: true  },
-      { id: 'updated',     label: 'Last Updated',  avail: true  },
-      { id: 'removedDate', label: 'Removed Date',  avail: false },
-      { id: 'whatsNew',    label: "What's New",    avail: false },
+      { id: 'released',    label: 'Release Date', avail: true  },
+      { id: 'updated',     label: 'Last Updated', avail: true  },
+      { id: 'removedDate', label: 'Removed Date', avail: false },
+      { id: 'whatsNew',    label: "What's New",   avail: false },
     ],
   },
   {
@@ -100,13 +100,13 @@ const METRIC_GROUPS = [
   {
     group: 'Monetization',
     items: [
-      { id: 'offersIAP',    label: 'In-App Purchases',        avail: true  },
-      { id: 'iapPriceMin',  label: 'IAP Price Min [US]',      avail: false },
-      { id: 'iapPriceMax',  label: 'IAP Price Max [US]',      avail: false },
-      { id: 'price',        label: 'Price',                   avail: true  },
-      { id: 'priceDrop',    label: 'Price Drop',              avail: false },
-      { id: 'priceSaleEnd', label: 'Price Sale End',          avail: false },
-      { id: 'paywall',      label: 'Paywall',                 avail: false },
+      { id: 'offersIAP',    label: 'In-App Purchases',   avail: true  },
+      { id: 'iapPriceMin',  label: 'IAP Price Min [US]', avail: false },
+      { id: 'iapPriceMax',  label: 'IAP Price Max [US]', avail: false },
+      { id: 'price',        label: 'Price',              avail: true  },
+      { id: 'priceDrop',    label: 'Price Drop',         avail: false },
+      { id: 'priceSaleEnd', label: 'Price Sale End',     avail: false },
+      { id: 'paywall',      label: 'Paywall',            avail: false },
     ],
   },
   {
@@ -138,10 +138,10 @@ const METRIC_GROUPS = [
   {
     group: 'Visibility',
     items: [
-      { id: 'similarApps',         label: 'Similar Apps',                avail: false },
-      { id: 'reverseSimilarApps',  label: 'Reverse Similar Apps',        avail: false },
-      { id: 'similarAppsPos',      label: 'Similar Apps Position',       avail: false },
-      { id: 'reverseSimilarPos',   label: 'Reverse Similar Apps Pos.',   avail: false },
+      { id: 'similarApps',        label: 'Similar Apps',              avail: false },
+      { id: 'reverseSimilarApps', label: 'Reverse Similar Apps',      avail: false },
+      { id: 'similarAppsPos',     label: 'Similar Apps Position',     avail: false },
+      { id: 'reverseSimilarPos',  label: 'Reverse Similar Apps Pos.', avail: false },
     ],
   },
   {
@@ -153,15 +153,15 @@ const METRIC_GROUPS = [
   {
     group: 'Other',
     items: [
-      { id: 'earlyAccess',     label: 'Early Access',        avail: false },
-      { id: 'googlePlayLink',  label: 'Google Play Link',    avail: true  },
-      { id: 'privacyPolicy',   label: 'Privacy Policy',      avail: false },
-      { id: 'developerCat',    label: 'Developer Category',  avail: false },
-      { id: 'developerType',   label: 'Developer Type',      avail: false },
-      { id: 'contentRatingUS', label: 'Content Rating US',   avail: true  },
-      { id: 'contentRatingGB', label: 'Content Rating GB',   avail: false },
-      { id: 'preRegister',     label: 'Pre-Register',        avail: false },
-      { id: 'sdk',             label: 'SDK',                 avail: false },
+      { id: 'earlyAccess',     label: 'Early Access',       avail: false },
+      { id: 'googlePlayLink',  label: 'Google Play Link',   avail: true  },
+      { id: 'privacyPolicy',   label: 'Privacy Policy',     avail: false },
+      { id: 'developerCat',    label: 'Developer Category', avail: false },
+      { id: 'developerType',   label: 'Developer Type',     avail: false },
+      { id: 'contentRatingUS', label: 'Content Rating US',  avail: true  },
+      { id: 'contentRatingGB', label: 'Content Rating GB',  avail: false },
+      { id: 'preRegister',     label: 'Pre-Register',       avail: false },
+      { id: 'sdk',             label: 'SDK',                avail: false },
     ],
   },
 ];
@@ -174,11 +174,10 @@ const DEFAULT_METRICS = [
   'updated', 'monthlyInstalls', 'revenueEstimate', 'asoScore',
 ];
 
-// Metrics that map to the same sort key
 const SORT_KEY = {
-  storeTitle:     'title',     storeDeveloper: 'developer',
-  totalInstalls:  'minInstalls', contentRatingUS: 'contentRating',
-  tags:           'category',
+  storeTitle: 'title', storeDeveloper: 'developer',
+  totalInstalls: 'minInstalls', contentRatingUS: 'contentRating',
+  tags: 'category',
 };
 const SORTABLE_IDS = new Set([
   'dailyInstalls','minInstalls','monthlyInstalls','revenueEstimate','asoScore',
@@ -232,14 +231,24 @@ const DAILY_MAX_O  = [{v:0,l:'Max: Any'},{v:10,l:'Max: 10'},{v:100,l:'Max: 100'}
 const CONTENT_OPTS = [{v:'all',l:'All'},{v:'Everyone',l:'Everyone'},{v:'Teen',l:'Teen'},{v:'Mature 17+',l:'Mature 17+'}];
 const COUNTRIES    = [['us','🇺🇸 US'],['gb','🇬🇧 UK'],['in','🇮🇳 IN'],['de','🇩🇪 DE'],['fr','🇫🇷 FR'],['br','🇧🇷 BR'],['ca','🇨🇦 CA'],['au','🇦🇺 AU'],['jp','🇯🇵 JP'],['kr','🇰🇷 KR'],['mx','🇲🇽 MX'],['id','🇮🇩 ID']];
 
+// Client-side title relevance filter.
+// When titleOnly=true: keep only apps whose title includes the search term.
+// This avoids irrelevant Google Play "relevance" results (e.g. Candy Crush
+// showing up for "puzzle" because Google ranks it there).
+function applyTitleFilter(apps, query, titleOnly) {
+  if (!titleOnly || !query.trim()) return apps;
+  const term = query.toLowerCase().trim();
+  return apps.filter(a => a.title?.toLowerCase().includes(term));
+}
+
 function applyFilters(apps, f) {
   return apps.filter(a => {
     if (f.status === 'live'    && a._status === 'removed') return false;
     if (f.status === 'removed' && a._status !== 'removed') return false;
-    if (f.minRating   > 0 && (a.score       || 0) < f.minRating)    return false;
-    if (f.minInstalls > 0 && (a.minInstalls  || 0) < f.minInstalls)  return false;
-    if (f.dailyMin    > 0 && (a.dailyInstalls|| 0) < f.dailyMin)     return false;
-    if (f.dailyMax    > 0 && (a.dailyInstalls|| 0) > f.dailyMax)     return false;
+    if (f.minRating   > 0 && (a.score        || 0) < f.minRating)   return false;
+    if (f.minInstalls > 0 && (a.minInstalls   || 0) < f.minInstalls) return false;
+    if (f.dailyMin    > 0 && (a.dailyInstalls || 0) < f.dailyMin)    return false;
+    if (f.dailyMax    > 0 && (a.dailyInstalls || 0) > f.dailyMax)    return false;
     if (f.priceType === 'free' && a.free === false) return false;
     if (f.priceType === 'paid' && a.free !== false) return false;
     if (f.updateRange !== 'any') {
@@ -262,10 +271,9 @@ function applyFilters(apps, f) {
   });
 }
 
-function sortKey(id) { return SORT_KEY[id] || id; }
 function applySort(apps, { key, dir }) {
   if (!SORTABLE_IDS.has(key)) return apps;
-  const sk = sortKey(key);
+  const sk = SORT_KEY[key] || key;
   return [...apps].sort((a, b) => {
     let va, vb;
     switch (sk) {
@@ -290,14 +298,15 @@ function applySort(apps, { key, dir }) {
   });
 }
 
-function countActive(f) { return Object.keys(f).filter(k => f[k] !== FILTER_DEFAULTS[k]).length; }
+function countActive(f) {
+  return Object.keys(f).filter(k => f[k] !== FILTER_DEFAULTS[k]).length;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 4.  CELL RENDERER  — renders a metric value for one app row
+// 4.  CELL RENDERER
 // ─────────────────────────────────────────────────────────────────────────────
 function CellValue({ app, id }) {
   switch (id) {
-    // Performance
     case 'dailyInstalls':    return <N>{fmtNum(app.dailyInstalls)}</N>;
     case 'minInstalls':
     case 'totalInstalls':    return <N>{fmtNum(app.minInstalls)}</N>;
@@ -305,17 +314,14 @@ function CellValue({ app, id }) {
     case 'revenueEstimate':  return app.revenueEstimate
       ? <span className="font-semibold text-emerald-700">{fmtRevenue(app.revenueEstimate)}</span> : <Nil/>;
     case 'asoScore':         return <ASOBadge score={app.asoScore}/>;
-    // Ratings
     case 'score':
       return app.score > 0
         ? <span className="flex items-center gap-1"><Star size={11} className="text-amber-500 fill-amber-500"/><span className="font-semibold text-slate-700">{app.score.toFixed(1)}</span>{app.reviews > 0 && <span className="text-[11px] text-slate-400">({fmtNum(app.reviews)})</span>}</span>
         : <Nil/>;
     case 'ratings':          return <span className="text-slate-600">{fmtNum(app.ratings)}</span>;
     case 'reviews':          return <span className="text-slate-600">{fmtNum(app.reviews)}</span>;
-    // Releases
     case 'released':         return <span className="text-xs text-slate-500">{fmtDate(app.released)}</span>;
     case 'updated':          return <UpdateAge days={app.daysSinceUpdate}/>;
-    // Store Presence
     case 'storeTitle':       return <span className="font-medium text-slate-700 text-sm">{app.title}</span>;
     case 'storeDeveloper':
     case 'developer':        return <span className="text-xs text-slate-600 block max-w-[130px] truncate">{app.developer || '—'}</span>;
@@ -323,8 +329,7 @@ function CellValue({ app, id }) {
     case 'category':
     case 'tags':             return <span className="text-xs text-slate-600">{app.genre || '—'}</span>;
     case 'type':             return app.free !== false
-      ? <Pill c="green">Free</Pill>
-      : <Pill c="slate">Paid</Pill>;
+      ? <Pill c="green">Free</Pill> : <Pill c="slate">Paid</Pill>;
     case 'size':             return <span className="text-xs text-slate-600">{app.size || '—'}</span>;
     case 'version':          return <span className="text-xs text-slate-600">{app.version || '—'}</span>;
     case 'androidVersion':   return <span className="text-xs text-slate-600">{app.androidVersion || '—'}</span>;
@@ -336,13 +341,11 @@ function CellValue({ app, id }) {
       ? <span className="text-xs text-slate-600 block max-w-[180px] truncate">{app.summaryText}</span> : <Nil/>;
     case 'screenshots':      return <span className="text-sm text-slate-600">{app.screenshotCount ?? '—'}</span>;
     case 'trailer':          return app.hasVideo ? <Pill c="purple">Yes</Pill> : <span className="text-xs text-slate-400">No</span>;
-    // Monetization
-    case 'offersIAP':        return app.offersIAP   ? <Pill c="blue">Yes</Pill>    : <span className="text-xs text-slate-400">No</span>;
-    case 'adSupported':      return app.adSupported ? <Pill c="orange">Yes</Pill>  : <span className="text-xs text-slate-400">No</span>;
+    case 'offersIAP':        return app.offersIAP   ? <Pill c="blue">Yes</Pill>   : <span className="text-xs text-slate-400">No</span>;
+    case 'adSupported':      return app.adSupported ? <Pill c="orange">Yes</Pill> : <span className="text-xs text-slate-400">No</span>;
     case 'price':            return app.free !== false
       ? <Pill c="green">Free</Pill>
       : <span className="text-xs font-semibold text-slate-700 flex items-center gap-0.5"><DollarSign size={9}/>{(app.price||0).toFixed(2)}</span>;
-    // Other
     case 'googlePlayLink':   return app.appId
       ? <a href={`https://play.google.com/store/apps/details?id=${app.appId}`} target="_blank" rel="noopener noreferrer"
           className="text-blue-600 hover:underline text-xs flex items-center gap-1"><ExternalLink size={10}/>Play</a>
@@ -384,10 +387,31 @@ function StatusBadge({ status }) {
   if (status === 'removed') return <span className="text-[9px] font-bold text-red-600 bg-red-100 px-1 py-0.5 rounded-full ring-1 ring-red-200">REMOVED</span>;
   return null;
 }
-function Sep() { return <div className="h-4 w-px bg-slate-200 flex-shrink-0"/>; }
+function Sep() { return <div className="h-6 w-px bg-slate-200 flex-shrink-0"/>; }
+function MiniSpin() {
+  return <div className="w-3 h-3 border border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0"/>;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 6.  METRICS PICKER MODAL
+// 6.  BIG STAT — matches the AppStoreSpy stats row style
+// ─────────────────────────────────────────────────────────────────────────────
+function BigStat({ label, value, red, muted }) {
+  return (
+    <div className="flex flex-col flex-shrink-0">
+      <span className={clsx(
+        'text-xl font-bold tabular-nums leading-none',
+        red   ? 'text-red-600'   :
+        muted ? 'text-slate-400' : 'text-slate-800'
+      )}>
+        {typeof value === 'number' ? value.toLocaleString() : value}
+      </span>
+      <span className="text-[11px] text-slate-500 mt-1 whitespace-nowrap">{label}</span>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 7.  METRICS PICKER MODAL
 // ─────────────────────────────────────────────────────────────────────────────
 function MetricsPicker({ selected, onApply, onClose }) {
   const [tmp,      setTmp]      = useState([...selected]);
@@ -404,10 +428,10 @@ function MetricsPicker({ selected, onApply, onClose }) {
     ? METRIC_GROUPS.map(g => ({ ...g, items: g.items.filter(m => m.label.toLowerCase().includes(search.toLowerCase())) })).filter(g => g.items.length)
     : METRIC_GROUPS;
 
-  const onDragStart  = (e, id) => { setDragging(id); e.dataTransfer.effectAllowed = 'move'; };
-  const onDragEnter  = id => { if (dragging && dragging !== id) setDragOver(id); };
-  const onDragEnd    = () => { setDragging(null); setDragOver(null); };
-  const onDrop       = targetId => {
+  const onDragStart = (e, id) => { setDragging(id); e.dataTransfer.effectAllowed = 'move'; };
+  const onDragEnter = id => { if (dragging && dragging !== id) setDragOver(id); };
+  const onDragEnd   = () => { setDragging(null); setDragOver(null); };
+  const onDrop      = targetId => {
     if (!dragging || dragging === targetId) return;
     setTmp(s => {
       const a = [...s], fi = a.indexOf(dragging), ti = a.indexOf(targetId);
@@ -419,13 +443,10 @@ function MetricsPicker({ selected, onApply, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl flex flex-col" style={{ width: 700, maxHeight: '88vh' }} onClick={e => e.stopPropagation()}>
-
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 flex-shrink-0">
           <h2 className="text-[15px] font-bold text-slate-800">Pick your metrics</h2>
           <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"><X size={16}/></button>
         </div>
-
         <div className="flex flex-1 overflow-hidden">
           {/* LEFT: grouped list */}
           <div className="flex flex-col border-r border-slate-200 flex-shrink-0" style={{ width: 260 }}>
@@ -457,7 +478,6 @@ function MetricsPicker({ selected, onApply, onClose }) {
               ))}
             </div>
           </div>
-
           {/* RIGHT: selected, drag to reorder */}
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
@@ -494,10 +514,9 @@ function MetricsPicker({ selected, onApply, onClose }) {
             </div>
           </div>
         </div>
-
-        {/* Footer — no "Suggest a metrics" button */}
+        {/* Footer */}
         <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 flex-shrink-0">
-          <button onClick={onClose}          className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900 font-medium rounded-lg hover:bg-slate-100 transition-colors">Cancel</button>
+          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900 font-medium rounded-lg hover:bg-slate-100 transition-colors">Cancel</button>
           <button onClick={() => onApply(tmp)} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors">Apply</button>
         </div>
       </div>
@@ -506,10 +525,10 @@ function MetricsPicker({ selected, onApply, onClose }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 7.  THREE VIEWS
+// 8.  THREE VIEWS
 // ─────────────────────────────────────────────────────────────────────────────
 function SortTh({ id, label, sort, onSort }) {
-  const active = sort.key === id;
+  const active   = sort.key === id;
   const sortable = SORTABLE_IDS.has(id);
   return (
     <th onClick={() => sortable && onSort(id)}
@@ -524,7 +543,6 @@ function SortTh({ id, label, sort, onSort }) {
   );
 }
 
-/* ── TABLE ── */
 function TableView({ apps, metrics, sort, onSort }) {
   return (
     <div className="flex-1 overflow-x-auto overflow-y-auto market-scroll">
@@ -572,7 +590,6 @@ function TableView({ apps, metrics, sort, onSort }) {
   );
 }
 
-/* ── GRID ── */
 function GridView({ apps }) {
   return (
     <div className="flex-1 overflow-y-auto market-scroll p-4">
@@ -615,7 +632,6 @@ function GridView({ apps }) {
   );
 }
 
-/* ── FULL ── */
 function FullView({ apps }) {
   return (
     <div className="flex-1 overflow-y-auto market-scroll divide-y divide-slate-100 bg-white">
@@ -641,13 +657,13 @@ function FullView({ apps }) {
                 {app.offersIAP  && <span className="text-blue-600 font-medium">iap</span>}
               </div>
               <div className="flex items-center gap-5 mt-2 text-xs flex-wrap">
-                {app.minInstalls > 0 && <span><span className="text-slate-400">Installs </span><N>{fmtNum(app.minInstalls)}</N></span>}
-                {app.dailyInstalls   && <span><span className="text-slate-400">Daily </span><N>{fmtNum(app.dailyInstalls)}</N></span>}
-                {app.monthlyInstalls && <span><span className="text-slate-400">Monthly </span><N>{fmtNum(app.monthlyInstalls)}</N></span>}
-                {app.revenueEstimate && <span><span className="text-slate-400">Revenue </span><span className="font-semibold text-emerald-700">{fmtRevenue(app.revenueEstimate)}/mo</span></span>}
-                {app.asoScore != null && <span><span className="text-slate-400">ASO </span><ASOBadge score={app.asoScore}/></span>}
-                {app.version && <span className="text-slate-400">v{app.version}</span>}
-                {app.size    && <span className="text-slate-400">{app.size}</span>}
+                {app.minInstalls   > 0 && <span><span className="text-slate-400">Installs </span><N>{fmtNum(app.minInstalls)}</N></span>}
+                {app.dailyInstalls    && <span><span className="text-slate-400">Daily </span><N>{fmtNum(app.dailyInstalls)}</N></span>}
+                {app.monthlyInstalls  && <span><span className="text-slate-400">Monthly </span><N>{fmtNum(app.monthlyInstalls)}</N></span>}
+                {app.revenueEstimate  && <span><span className="text-slate-400">Revenue </span><span className="font-semibold text-emerald-700">{fmtRevenue(app.revenueEstimate)}/mo</span></span>}
+                {app.asoScore  != null && <span><span className="text-slate-400">ASO </span><ASOBadge score={app.asoScore}/></span>}
+                {app.version   && <span className="text-slate-400">v{app.version}</span>}
+                {app.size      && <span className="text-slate-400">{app.size}</span>}
               </div>
             </div>
             <a href={`https://play.google.com/store/apps/details?id=${app.appId}`} target="_blank" rel="noopener noreferrer"
@@ -655,7 +671,6 @@ function FullView({ apps }) {
               <ExternalLink size={15}/>
             </a>
           </div>
-          {/* Screenshots */}
           {(app.screenshotUrls?.length > 0 || app.screenshotCount > 0) && (
             <div className="mt-4 screenshots-scroll overflow-x-auto pb-2">
               <div className="flex gap-2" style={{ width: 'max-content' }}>
@@ -677,29 +692,8 @@ function FullView({ apps }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 8.  STATS BAR HELPERS
+// 9.  FILTER PANEL HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
-function computeStats(apps) {
-  const total   = apps.length;
-  const active  = apps.filter(a => a.daysSinceUpdate != null && a.daysSinceUpdate <= 365).length;
-  const stale   = apps.filter(a => a.daysSinceUpdate != null && a.daysSinceUpdate  > 365).length;
-  const removed = apps.filter(a => a._status === 'removed').length;
-  const scored  = apps.filter(a => a.score > 0);
-  const avgRating = scored.length ? (scored.reduce((s, a) => s + a.score, 0) / scored.length).toFixed(1) : '—';
-  const freeN   = apps.filter(a => a.free !== false).length;
-  const iapN    = apps.filter(a => a.offersIAP).length;
-  const totalRev = apps.reduce((s, a) => s + (a.revenueEstimate || 0), 0);
-  return { total, active, stale, removed, avgRating, freeN, iapN, totalRev };
-}
-function StatItem({ label, value }) {
-  return <div className="flex items-center gap-1.5 flex-shrink-0"><span className="text-slate-500 text-sm">{label}</span><span className="font-semibold text-slate-800 text-sm">{value}</span></div>;
-}
-function StatDot({ color, label, value }) {
-  return <div className="flex items-center gap-1.5 flex-shrink-0"><span className={`w-2 h-2 rounded-full flex-shrink-0 ${color}`}/><span className="text-slate-500 text-sm">{label}</span><span className="font-semibold text-slate-800 text-sm">{value}</span></div>;
-}
-function ScorePill({ label, score, cls }) {
-  return <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold flex-shrink-0 ${cls}`}>{label}: {score}</span>;
-}
 function FSelect({ label, value, onChange, opts }) {
   return (
     <div>
@@ -715,62 +709,146 @@ function FSelect({ label, value, onChange, opts }) {
 const SUGGESTIONS = ['meditation','fitness tracker','budget planner','photo editor','language learning','habit tracker','sleep sounds','recipe app'];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 9.  MAIN COMPONENT
+// 10.  MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
+// Batching strategy:
+//   batch 0 – exact query (shown immediately)
+//   batch 1–3 – auto-loaded in background after batch 0 completes
+//   batch 4–5 – manual "Load More" button
+// Each batch uses a different search variant so we surface different apps.
+// All results are deduplicated by appId on the frontend.
+// Title filter (strictTitle=true): only show apps whose title contains the
+// search keyword — fixes the "Candy Crush showing for puzzle" problem.
+
+const MAX_AUTO_BATCH  = 3;   // batches 0-3 load automatically
+const MAX_TOTAL_BATCH = 5;   // batches 4-5 require "Load More"
+
 export default function Dashboard() {
   const [query,        setQuery]        = useState('');
   const [country,      setCountry]      = useState('us');
-  const [fetchCount,   setFetchCount]   = useState(100);
   const [loading,      setLoading]      = useState(false);
+  const [loadingMore,  setLoadingMore]  = useState(false);
   const [error,        setError]        = useState('');
-  const [result,       setResult]       = useState(null);
-  const [apps,         setApps]         = useState([]);
+  const [result,       setResult]       = useState(null);   // metrics from batch 0
+  const [apps,         setApps]         = useState([]);     // all fetched, deduped
+  const [currentBatch, setCurrentBatch] = useState(-1);
   const [filters,      setFilters]      = useState(FILTER_DEFAULTS);
   const [showFilters,  setShowFilters]  = useState(false);
   const [showPicker,   setShowPicker]   = useState(false);
   const [metrics,      setMetrics]      = useState(DEFAULT_METRICS);
   const [sort,         setSort]         = useState({ key: 'minInstalls', dir: 'desc' });
   const [view,         setView]         = useState('table');
+  const [strictTitle,  setStrictTitle]  = useState(true);   // title-relevance filter
   const [checkingRemoved, setCheckingRemoved] = useState(false);
   const [checkProgress,   setCheckProgress]   = useState(null);
 
-  const doSearch = useCallback(async (q = query, c = country, n = fetchCount) => {
-    if (!q.trim()) return;
-    setLoading(true); setError(''); setResult(null); setApps([]); setCheckProgress(null);
-    try {
-      const data = await nichesAPI.search(q.trim(), c, n);
-      setResult(data);
-      setApps((data.apps || []).map(a => ({ ...a, _status: 'unknown' })));
-    } catch (e) { setError(e.message); }
-    finally     { setLoading(false); }
-  }, [query, country, fetchCount]);
+  // Each new search gets a unique ID so background batches from an old search
+  // are ignored if a new search is started before they complete.
+  const searchIdRef = useRef(0);
 
-  const handleKey  = e => { if (e.key === 'Enter') doSearch(); };
+  // ── dedup helper ──────────────────────────────────────────────────────────
+  function mergeApps(existing, incoming) {
+    const ids = new Set(existing.map(a => a.appId));
+    return [...existing, ...incoming.filter(a => !ids.has(a.appId)).map(a => ({ ...a, _status: 'unknown' }))];
+  }
+
+  // ── main search (always starts from batch 0) ──────────────────────────────
+  async function doSearch(q, c) {
+    const qStr = (q ?? query).trim();
+    const cStr = c ?? country;
+    if (!qStr) return;
+
+    const sid = ++searchIdRef.current;
+    setLoading(true);
+    setError('');
+    setResult(null);
+    setApps([]);
+    setCurrentBatch(-1);
+    setCheckProgress(null);
+    setLoadingMore(false);
+
+    try {
+      // ── Batch 0 (blocks loading screen) ──────────────────────────────────
+      const data0 = await nichesAPI.search(qStr, cStr, 0);
+      if (searchIdRef.current !== sid) return;
+      setResult(data0);
+      setApps((data0.apps || []).map(a => ({ ...a, _status: 'unknown' })));
+      setCurrentBatch(0);
+      setLoading(false);
+
+      // ── Batches 1 – MAX_AUTO_BATCH (background, results trickle in) ───────
+      for (let b = 1; b <= MAX_AUTO_BATCH; b++) {
+        if (searchIdRef.current !== sid) return;
+        setLoadingMore(true);
+        try {
+          const dataB = await nichesAPI.search(qStr, cStr, b);
+          if (searchIdRef.current !== sid) return;
+          setApps(prev => mergeApps(prev, dataB.apps || []));
+          setCurrentBatch(b);
+        } catch { /* ignore individual batch failures */ }
+      }
+    } catch (e) {
+      if (searchIdRef.current === sid) {
+        setError(e.message);
+        setLoading(false);
+      }
+    } finally {
+      if (searchIdRef.current === sid) setLoadingMore(false);
+    }
+  }
+
+  // ── manual "Load More" for batches 4-5 ────────────────────────────────────
+  async function loadMore() {
+    if (loadingMore || currentBatch >= MAX_TOTAL_BATCH) return;
+    const nextBatch = currentBatch + 1;
+    const sid = searchIdRef.current;
+    setLoadingMore(true);
+    try {
+      const data = await nichesAPI.search(query.trim(), country, nextBatch);
+      if (searchIdRef.current !== sid) return;
+      setApps(prev => mergeApps(prev, data.apps || []));
+      setCurrentBatch(nextBatch);
+    } catch {}
+    if (searchIdRef.current === sid) setLoadingMore(false);
+  }
+
+  const handleKey  = e => { if (e.key === 'Enter') doSearch(query, country); };
   const handleSort = key => setSort(s => s.key === key ? { key, dir: s.dir === 'desc' ? 'asc' : 'desc' } : { key, dir: 'desc' });
   const setFilter  = (k, v) => setFilters(f => ({ ...f, [k]: v }));
   const activeCount = countActive(filters);
 
-  const checkRemoved = useCallback(async () => {
+  // Country change → auto re-fetch if we already have results
+  function handleCountryChange(nc) {
+    setCountry(nc);
+    if (result && query.trim()) doSearch(query, nc);
+  }
+
+  // ── removed-app checker ───────────────────────────────────────────────────
+  async function checkRemoved() {
     if (checkingRemoved || !apps.length) return;
     setCheckingRemoved(true);
     const ids = apps.map(a => a.appId);
-    const BATCH = 25;
     setCheckProgress({ done: 0, total: ids.length });
-    for (let i = 0; i < ids.length; i += BATCH) {
+    for (let i = 0; i < ids.length; i += 25) {
       try {
-        const data = await nichesAPI.checkApps(ids.slice(i, i + BATCH), country);
+        const data = await nichesAPI.checkApps(ids.slice(i, i + 25), country);
         const map = {};
         (data.results || []).forEach(r => { map[r.appId] = r.status; });
         setApps(prev => prev.map(a => map[a.appId] ? { ...a, _status: map[a.appId] } : a));
       } catch {}
-      setCheckProgress({ done: Math.min(i + BATCH, ids.length), total: ids.length });
+      setCheckProgress({ done: Math.min(i + 25, ids.length), total: ids.length });
     }
     setCheckingRemoved(false);
-  }, [apps, country, checkingRemoved]);
+  }
 
-  const displayed = applySort(applyFilters(apps, filters), sort);
-  const stats     = apps.length > 0 ? computeStats(apps) : null;
-  const m         = result?.metrics;
+  // ── computed display values ────────────────────────────────────────────────
+  // 1. title filter (client-side relevance)
+  const titleMatchedApps = applyTitleFilter(apps, query, strictTitle);
+  // 2. other filters + sort
+  const displayed = applySort(applyFilters(titleMatchedApps, filters), sort);
+
+  const removedCount = apps.filter(a => a._status === 'removed').length;
+  const m            = result?.metrics;
 
   // ── HERO ──────────────────────────────────────────────────────────────────
   if (!result && !loading) {
@@ -782,6 +860,7 @@ export default function Dashboard() {
           </div>
           <h1 className="text-4xl font-bold text-slate-900 mb-2 tracking-tight">Market Explorer</h1>
           <p className="text-slate-500 text-lg mb-8">Search any keyword to analyse every app competing in that niche</p>
+
           <div className="flex gap-2 shadow-sm">
             <div className="relative flex-1">
               <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"/>
@@ -789,26 +868,30 @@ export default function Dashboard() {
                 placeholder="e.g. meditation, fitness tracker, budget planner…"
                 className="w-full pl-11 pr-4 py-3.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white text-slate-900 placeholder:text-slate-400"/>
             </div>
-            <select value={country} onChange={e => setCountry(e.target.value)} className="px-3 text-sm border border-slate-200 rounded-xl bg-white text-slate-700 focus:outline-none focus:border-blue-400">
+            <select value={country} onChange={e => setCountry(e.target.value)}
+              className="px-3 text-sm border border-slate-200 rounded-xl bg-white text-slate-700 focus:outline-none focus:border-blue-400">
               {COUNTRIES.map(([c,l]) => <option key={c} value={c}>{l}</option>)}
             </select>
-            <select value={fetchCount} onChange={e => setFetchCount(parseInt(e.target.value))} className="px-3 text-sm border border-slate-200 rounded-xl bg-white text-slate-700 focus:outline-none focus:border-blue-400">
-              {[25,50,100,150,200,250].map(n => <option key={n} value={n}>{n} apps</option>)}
-            </select>
-            <button onClick={() => doSearch()} className="px-7 py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-semibold rounded-xl transition-all">Search</button>
+            <button onClick={() => doSearch(query, country)}
+              className="px-7 py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-semibold rounded-xl transition-all">
+              Search
+            </button>
           </div>
+
           {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
+
           <div className="mt-8 flex flex-wrap justify-center gap-2">
             {SUGGESTIONS.map(s => (
-              <button key={s} onClick={() => { setQuery(s); doSearch(s); }}
+              <button key={s} onClick={() => { setQuery(s); doSearch(s, country); }}
                 className="px-3.5 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors">{s}</button>
             ))}
           </div>
+
           <div className="mt-12 grid grid-cols-3 gap-4 text-left">
             {[
-              { icon: Package, t: 'Up to 250 apps per search', d: 'Every result Google Play returns for the keyword — not just the top 5.' },
-              { icon: SlidersHorizontal, t: 'Pick your columns', d: 'Choose from 60+ metrics. Drag to reorder. Available data shows live.' },
-              { icon: Zap, t: 'ASO quality scores', d: 'Spot weak competitors and find the best niche entry point.' },
+              { icon: Package,          t: 'Up to 1 500 apps fetched',   d: '6 search batches × 250 results, deduplicated — far more than a single search.' },
+              { icon: SlidersHorizontal, t: 'Pick your columns',          d: 'Choose from 60+ metrics. Drag to reorder. Available data shows live.' },
+              { icon: Zap,              t: 'Exact title matching',        d: 'Title-only filter shows only apps truly in your niche, not Google's ranking noise.' },
             ].map(({ icon: Icon, t, d }) => (
               <div key={t} className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                 <Icon size={16} className="text-blue-600 mb-2"/>
@@ -822,13 +905,13 @@ export default function Dashboard() {
     );
   }
 
-  // ── LOADING ───────────────────────────────────────────────────────────────
+  // ── LOADING (batch 0) ─────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-white gap-4">
         <div className="w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"/>
-        <p className="text-sm text-slate-500">Analysing <strong className="text-slate-700">"{query}"</strong> — fetching {fetchCount} apps…</p>
-        <p className="text-xs text-slate-400">Enriching top 20 with full detail (screenshots, version, description…)</p>
+        <p className="text-sm text-slate-600">Searching <strong>"{query}"</strong> on Google Play…</p>
+        <p className="text-xs text-slate-400">Enriching top 20 results with full detail</p>
       </div>
     );
   }
@@ -839,24 +922,25 @@ export default function Dashboard() {
 
       {/* ── TOP BAR ── */}
       <div className="bg-white border-b border-slate-200 px-4 py-2.5 flex items-center gap-2 sticky top-0 z-20 shadow-sm flex-wrap">
-        {/* Search */}
+        {/* Search input */}
         <div className="relative flex-1 min-w-[160px] max-w-xs">
           <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"/>
           <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={handleKey}
             placeholder="Search keyword…"
-            className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 bg-white text-slate-900 placeholder:text-slate-400"/>
+            className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 bg-white text-slate-900"/>
         </div>
-        <select value={country} onChange={e => setCountry(e.target.value)}
-          className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:border-blue-400">
+
+        {/* Country — changing country auto-refetches */}
+        <select value={country} onChange={e => handleCountryChange(e.target.value)}
+          className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:border-blue-400"
+          title="Changing country will re-fetch results">
           {COUNTRIES.map(([c,l]) => <option key={c} value={c}>{l}</option>)}
         </select>
-        {/* Fetch count selector */}
-        <select value={fetchCount} onChange={e => setFetchCount(parseInt(e.target.value))}
-          className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:border-blue-400"
-          title="Number of apps to fetch (max 250 per Google Play search)">
-          {[25,50,100,150,200,250].map(n => <option key={n} value={n}>{n} apps</option>)}
-        </select>
-        <button onClick={() => doSearch()} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors">Search</button>
+
+        <button onClick={() => doSearch(query, country)}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1.5">
+          <RefreshCw size={13}/> Search
+        </button>
 
         <Sep/>
 
@@ -886,7 +970,16 @@ export default function Dashboard() {
           <SlidersHorizontal size={14}/> Filters
           {activeCount > 0 && <span className="w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">{activeCount}</span>}
         </button>
-        {activeCount > 0 && <button onClick={() => setFilters(FILTER_DEFAULTS)} className="flex items-center gap-1 text-xs text-slate-500 hover:text-red-500 transition-colors"><X size={11}/> Clear</button>}
+        {activeCount > 0 && (
+          <button onClick={() => setFilters(FILTER_DEFAULTS)} className="flex items-center gap-1 text-xs text-slate-500 hover:text-red-500 transition-colors"><X size={11}/> Clear</button>
+        )}
+
+        {/* Title-only toggle */}
+        <label className="flex items-center gap-1.5 cursor-pointer select-none ml-1" title="Show only apps whose title contains your search term">
+          <input type="checkbox" checked={strictTitle} onChange={e => setStrictTitle(e.target.checked)}
+            className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"/>
+          <span className="text-xs font-medium text-slate-600">Title only</span>
+        </label>
 
         <Sep/>
 
@@ -895,45 +988,70 @@ export default function Dashboard() {
           className={clsx('flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg border transition-colors',
             checkingRemoved ? 'bg-orange-50 border-orange-200 text-orange-600 cursor-wait' : 'bg-white border-slate-200 text-slate-600 hover:bg-red-50 hover:border-red-200 hover:text-red-600')}>
           {checkingRemoved
-            ? <><div className="w-3 h-3 border border-orange-400 border-t-transparent rounded-full animate-spin"/>{checkProgress ? `${checkProgress.done}/${checkProgress.total}` : '…'}</>
+            ? <><MiniSpin/>{checkProgress ? `${checkProgress.done}/${checkProgress.total}` : '…'}</>
             : <><AlertCircle size={13}/>Check Removed</>}
         </button>
       </div>
 
-      {/* ── STATS BAR ── */}
-      {stats && (
-        <div className="bg-white border-b border-slate-200 px-4 py-2.5 flex items-center gap-4 overflow-x-auto market-scroll flex-shrink-0">
-          <StatItem label="Total" value={stats.total}/>
-          <Sep/>
-          <StatDot color="bg-green-500" label="Active" value={stats.active}/>
-          <StatDot color="bg-red-400"   label="Stale"  value={stats.stale}/>
-          {stats.removed > 0 && <StatDot color="bg-red-600" label="Removed" value={stats.removed}/>}
-          <Sep/>
-          <StatItem label="Avg Rating" value={<span className="text-amber-600 font-bold">★ {stats.avgRating}</span>}/>
-          <StatItem label="Free"       value={stats.freeN}/>
-          <StatItem label="With IAP"   value={stats.iapN}/>
-          <StatItem label="Est. revenue" value={<span className="text-emerald-700 font-semibold">{fmtRevenue(stats.totalRev)}/mo</span>}/>
-          {m && (<><Sep/>
-            <ScorePill label="Opportunity" score={m.opportunityScore} cls={m.opportunityScore >= 65 ? 'bg-green-100 text-green-700' : m.opportunityScore >= 45 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}/>
-            <ScorePill label="Demand"      score={m.demandScore}      cls="bg-blue-100 text-blue-700"/>
-            <ScorePill label="Competition" score={m.competitionScore} cls="bg-slate-100 text-slate-700"/>
-          </>)}
-          <span className="ml-auto text-xs text-slate-400 flex-shrink-0">{displayed.length} / {apps.length} apps shown</span>
+      {/* ── STATS BAR (AppStoreSpy-style prominent numbers) ── */}
+      <div className="bg-white border-b border-slate-200 px-5 py-3 flex items-center gap-5 overflow-x-auto market-scroll flex-shrink-0">
+
+        <BigStat label="Fetched"     value={apps.length}/>
+        <div className="w-px h-8 bg-slate-200 flex-shrink-0"/>
+        <BigStat label="Title Match" value={titleMatchedApps.length}/>
+        <div className="w-px h-8 bg-slate-200 flex-shrink-0"/>
+        <BigStat label="Visible"     value={displayed.length}/>
+        {removedCount > 0 && <>
+          <div className="w-px h-8 bg-slate-200 flex-shrink-0"/>
+          <BigStat label="Removed" value={removedCount} red/>
+        </>}
+
+        {m && <>
+          <div className="w-px h-8 bg-slate-200 flex-shrink-0"/>
+          <span className={clsx('inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0',
+            m.opportunityScore >= 65 ? 'bg-green-100 text-green-700' : m.opportunityScore >= 45 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700')}>
+            Opp {m.opportunityScore}
+          </span>
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 flex-shrink-0">
+            Demand {m.demandScore}
+          </span>
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 flex-shrink-0">
+            Competition {m.competitionScore}
+          </span>
+        </>}
+
+        {/* Batch progress — right side */}
+        <div className="ml-auto flex items-center gap-3 flex-shrink-0">
+          {loadingMore && (
+            <div className="flex items-center gap-2 text-sm text-blue-600">
+              <MiniSpin/>
+              <span className="text-xs font-medium">Loading batch {currentBatch + 2}/6…</span>
+            </div>
+          )}
+          {!loadingMore && currentBatch >= MAX_AUTO_BATCH && currentBatch < MAX_TOTAL_BATCH && (
+            <button onClick={loadMore}
+              className="px-3 py-1.5 text-xs font-semibold bg-blue-50 text-blue-700 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors flex items-center gap-1.5">
+              <RefreshCw size={11}/>
+              Load More ({apps.length} fetched, batch {currentBatch + 2}/6)
+            </button>
+          )}
+          {currentBatch >= MAX_TOTAL_BATCH && !loadingMore && (
+            <span className="text-xs text-slate-400 font-medium">All 6 batches loaded</span>
+          )}
         </div>
-      )}
+      </div>
 
       {/* ── FILTER PANEL ── */}
       {showFilters && (
         <div className="bg-white border-b border-slate-200 px-4 py-4 space-y-4 flex-shrink-0">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            <FSelect label="Release date"    value={filters.releaseRange}   onChange={v => setFilter('releaseRange',  v)}                       opts={RELEASE_OPTS}/>
-            <FSelect label="Last updated"    value={filters.updateRange}    onChange={v => setFilter('updateRange',   v)}                       opts={UPDATE_OPTS}/>
-            <FSelect label="Min rating"      value={filters.minRating}      onChange={v => setFilter('minRating',     parseFloat(v))}           opts={[{v:0,l:'Any'},{v:3,l:'3★+'},{v:3.5,l:'3.5★+'},{v:4,l:'4★+'},{v:4.5,l:'4.5★+'}]}/>
-            <FSelect label="Min installs"    value={filters.minInstalls}    onChange={v => setFilter('minInstalls',   parseInt(v))}             opts={INSTALL_OPTS}/>
-            <FSelect label="Price"           value={filters.priceType}      onChange={v => setFilter('priceType',     v)}                       opts={[{v:'all',l:'All'},{v:'free',l:'Free only'},{v:'paid',l:'Paid only'}]}/>
-            <FSelect label="Content rating"  value={filters.contentRating}  onChange={v => setFilter('contentRating', v)}                       opts={CONTENT_OPTS}/>
+            <FSelect label="Release date"   value={filters.releaseRange}  onChange={v => setFilter('releaseRange',  v)}              opts={RELEASE_OPTS}/>
+            <FSelect label="Last updated"   value={filters.updateRange}   onChange={v => setFilter('updateRange',   v)}              opts={UPDATE_OPTS}/>
+            <FSelect label="Min rating"     value={filters.minRating}     onChange={v => setFilter('minRating',     parseFloat(v))}  opts={[{v:0,l:'Any'},{v:3,l:'3★+'},{v:3.5,l:'3.5★+'},{v:4,l:'4★+'},{v:4.5,l:'4.5★+'}]}/>
+            <FSelect label="Min installs"   value={filters.minInstalls}   onChange={v => setFilter('minInstalls',   parseInt(v))}    opts={INSTALL_OPTS}/>
+            <FSelect label="Price"          value={filters.priceType}     onChange={v => setFilter('priceType',     v)}              opts={[{v:'all',l:'All'},{v:'free',l:'Free only'},{v:'paid',l:'Paid only'}]}/>
+            <FSelect label="Content rating" value={filters.contentRating} onChange={v => setFilter('contentRating', v)}              opts={CONTENT_OPTS}/>
           </div>
-
           <div className="flex items-center gap-3 flex-wrap">
             {/* Daily installs range */}
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex-shrink-0">Daily installs</span>
@@ -955,7 +1073,9 @@ export default function Dashboard() {
               {[['all','All'],['live','Live only'],['removed','Removed only']].map(([v,l]) => (
                 <button key={v} onClick={() => setFilter('status', v)}
                   className={clsx('px-3 py-1.5 rounded-md text-xs font-medium transition-all',
-                    filters.status === v ? (v === 'removed' ? 'bg-red-600 text-white shadow-sm' : 'bg-white text-blue-700 shadow-sm') : 'text-slate-500 hover:text-slate-700')}>{l}</button>
+                    filters.status === v
+                      ? (v === 'removed' ? 'bg-red-600 text-white shadow-sm' : 'bg-white text-blue-700 shadow-sm')
+                      : 'text-slate-500 hover:text-slate-700')}>{l}</button>
               ))}
             </div>
 

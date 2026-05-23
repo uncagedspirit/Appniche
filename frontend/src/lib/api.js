@@ -55,8 +55,8 @@ export const nichesAPI = {
     api.get('/niches/analyze', { params: { category, country } }),
   opportunities: (country = 'us') =>
     api.get('/niches/opportunities', { params: { country } }),
-  search: (q, country = 'us', num = 250) =>
-    api.get('/niches/search', { params: { q, country, num } }),
+  search: (q, country = 'us', batch = 0) =>
+    api.get('/niches/search', { params: { q, country, batch } }),
   checkApps: (ids, country = 'us') =>
     api.get('/niches/check-apps', { params: { ids: ids.join(','), country } }),
 };
