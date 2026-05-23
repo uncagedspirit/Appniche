@@ -192,8 +192,8 @@ function countActiveFilters(f) {
 
 // ── keyword title filter ──────────────────────────────────────────────────────
 
-function applyKeywordFilter(apps, query, enabled) {
-  if (!enabled || !query) return apps;
+function applyKeywordFilter(apps, query) {
+  if (!query) return apps;
   const words = query.trim().toLowerCase().split(/\s+/).filter(w => w.length > 1);
   if (!words.length) return apps;
   return apps.filter(app => {
@@ -221,7 +221,6 @@ export default function NicheExplorer() {
   const [sortKey,        setSortKey]        = useState('default');
   const [showFilters,    setShowFilters]    = useState(false);
   const [viewMode,       setViewMode]       = useState('table');
-  const [titleMatchOnly, setTitleMatchOnly] = useState(true);
   const searchIdRef = useRef(0);
 
   // Browse (unchanged)
@@ -278,33 +277,35 @@ export default function NicheExplorer() {
       setAllApps(d.apps || []);
       setLoadingSearch(false);
 
-      // Fetch Play Store keyword suggestions — all of them, no cap
+      // Build queue: suggestions + alphabet expansions (a-z) — keeps going until exhausted
       let suggestions = [];
       try {
         const s = await keywordsAPI.suggest(query.trim(), country);
         suggestions = s.play || [];
-      } catch { /* suggestions optional */ }
+      } catch {}
 
-      // Build full queue: all suggestions + niches batches 1-5 (different query variants)
+      const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
       const queue = [
         ...suggestions.map(q => ({ q, batch: 0 })),
-        ...[1, 2, 3, 4, 5].map(b => ({ q: query.trim(), batch: b })),
+        ...alphabet.map(l => ({ q: `${query.trim()} ${l}`, batch: 0 })),
       ];
 
       setLoadingBatches(true);
-      for (let i = 0; i < queue.length; i++) {
+      let emptyRuns = 0;
+      for (const item of queue) {
         if (searchIdRef.current !== sid) break;
-        setBatchProgress(i + 1);
+        if (emptyRuns >= 5) break; // stop after 5 consecutive searches with no new apps
         try {
-          const bd = await nichesAPI.search(queue[i].q, country, queue[i].batch);
+          const bd = await nichesAPI.search(item.q, country, item.batch);
           if (searchIdRef.current !== sid) break;
           const fresh = (bd.apps || []).filter(a => {
             if (seen.has(a.appId)) return false;
             seen.add(a.appId);
             return true;
           });
-          if (fresh.length) setAllApps(prev => [...prev, ...fresh]);
-        } catch { /* skip, continue */ }
+          if (fresh.length) { setAllApps(prev => [...prev, ...fresh]); emptyRuns = 0; }
+          else emptyRuns++;
+        } catch { emptyRuns++; }
       }
     } catch (err) {
       if (searchIdRef.current === sid) {
@@ -328,7 +329,7 @@ export default function NicheExplorer() {
     finally { setLoadingRemoved(false); }
   };
 
-  const keywordFiltered = applyKeywordFilter(allApps, query, titleMatchOnly);
+  const keywordFiltered = applyKeywordFilter(allApps, query);
   const filteredApps    = applySort(applyFilters(keywordFiltered, filters), sortKey);
   const activeFilters = countActiveFilters(filters);
 
@@ -481,24 +482,7 @@ export default function NicheExplorer() {
                   )}
                 </button>
 
-                {/* Keyword match toggle */}
-                <button
-                  onClick={() => setTitleMatchOnly(p => !p)}
-                  className={clsx('flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm transition-all',
-                    titleMatchOnly
-                      ? 'border-acid/40 bg-acid/10 text-acid'
-                      : 'border-ink-700 text-ink-400 hover:text-ink-200'
-                  )}
-                  title={titleMatchOnly ? 'Showing only apps with keyword in title/summary — click to show all' : 'Click to filter to exact keyword matches only'}
-                >
-                  <Search size={13} />
-                  Exact match
-                  {titleMatchOnly && (
-                    <span className="bg-acid text-ink-900 text-xs font-bold px-1.5 rounded-full leading-4">ON</span>
-                  )}
-                </button>
-
-                <select value={sortKey} onChange={e => setSortKey(e.target.value)} className="select text-sm">
+<select value={sortKey} onChange={e => setSortKey(e.target.value)} className="select text-sm">
                   {SORT_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
 
@@ -513,15 +497,10 @@ export default function NicheExplorer() {
                   {loadingBatches && (
                     <span className="text-xs text-ink-500 flex items-center gap-1.5">
                       <RefreshCw size={11} className="animate-spin text-acid" />
-                      Loading more results…
+                      Loading more…
                     </span>
                   )}
-                  <span className="text-xs text-ink-500">
-                    {filteredApps.length}/{allApps.length} apps
-                    {titleMatchOnly && allApps.length > keywordFiltered.length && (
-                      <span className="text-ink-600 ml-1">({allApps.length - keywordFiltered.length} filtered out)</span>
-                    )}
-                  </span>
+                  <span className="text-xs text-ink-500">{filteredApps.length} apps</span>
                   <div className="flex bg-ink-800 border border-ink-700 rounded-lg p-0.5">
                     {[
                       { id: 'table', icon: <Table2 size={13} /> },
