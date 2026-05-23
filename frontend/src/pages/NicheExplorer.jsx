@@ -221,7 +221,10 @@ export default function NicheExplorer() {
   const [sortKey,        setSortKey]        = useState('default');
   const [showFilters,    setShowFilters]    = useState(false);
   const [viewMode,       setViewMode]       = useState('table');
-  const [titleMatchOnly, setTitleMatchOnly] = useState(true);
+  const [titleMatchOnly, setTitleMatchOnly] = useState(
+    () => localStorage.getItem('titleMatchOnly') !== 'false'
+  );
+  const [pagesLoaded, setPagesLoaded] = useState(0);
   const searchIdRef = useRef(0);
 
   // Browse (unchanged)
@@ -271,7 +274,7 @@ export default function NicheExplorer() {
     if (!query.trim()) return;
     const sid = ++searchIdRef.current;
     setSearchResult(null); setAllApps([]); setSearchError(null);
-    setLoadingSearch(true); setLoadingBatches(false);
+    setLoadingSearch(true); setLoadingBatches(false); setPagesLoaded(0);
     setFilters(DEFAULT_FILTERS); setSortKey('default');
 
     try {
@@ -280,9 +283,10 @@ export default function NicheExplorer() {
       setSearchResult(d);
       const seen = new Set((d.apps || []).map(a => a.appId));
       setAllApps(d.apps || []);
+      setPagesLoaded(1);
       setLoadingSearch(false);
 
-      // Keep fetching the same query until no new apps come back
+      // Keep fetching the same exact query until no new apps come back
       setLoadingBatches(true);
       let page = 1;
       while (true) {
@@ -297,6 +301,7 @@ export default function NicheExplorer() {
           });
           if (!fresh.length) break;
           setAllApps(prev => [...prev, ...fresh]);
+          setPagesLoaded(p => p + 1);
           page++;
         } catch { break; }
       }
@@ -472,7 +477,7 @@ export default function NicheExplorer() {
                   )}
                 </button>
 
-                <button onClick={() => setTitleMatchOnly(p => !p)}
+                <button onClick={() => setTitleMatchOnly(p => { const next = !p; localStorage.setItem('titleMatchOnly', next); return next; })}
                   className={clsx('flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm transition-all',
                     titleMatchOnly ? 'border-acid/40 bg-acid/10 text-acid' : 'border-ink-700 text-ink-400 hover:text-ink-200'
                   )}>
@@ -495,10 +500,12 @@ export default function NicheExplorer() {
                   {loadingBatches && (
                     <span className="text-xs text-ink-500 flex items-center gap-1.5">
                       <RefreshCw size={11} className="animate-spin text-acid" />
-                      Loading more…
+                      Fetching page {pagesLoaded + 1}…
                     </span>
                   )}
-                  <span className="text-xs text-ink-500">{filteredApps.length} apps</span>
+                  <span className="text-xs text-ink-500">
+                    {filteredApps.length} apps · {pagesLoaded} {pagesLoaded === 1 ? 'page' : 'pages'} fetched
+                  </span>
                   <div className="flex bg-ink-800 border border-ink-700 rounded-lg p-0.5">
                     {[
                       { id: 'table', icon: <Table2 size={13} /> },
