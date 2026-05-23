@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { nichesAPI } from '../lib/api.js';
 import { useSettings } from '../context/SettingsContext.jsx';
@@ -190,6 +190,21 @@ function countActiveFilters(f) {
   ).length;
 }
 
+// ── keyword title filter ──────────────────────────────────────────────────────
+
+function applyKeywordFilter(apps, query, enabled) {
+  if (!enabled || !query) return apps;
+  const words = query.toLowerCase().split(/\s+/).filter(w =>
+    !['app', 'free', 'pro', 'best', 'game'].includes(w) && w.length > 1
+  );
+  if (!words.length) return apps;
+  return apps.filter(app => {
+    const title   = (app.title       || '').toLowerCase();
+    const summary = (app.summaryText || '').toLowerCase();
+    return words.some(w => title.includes(w) || summary.includes(w));
+  });
+}
+
 // ── main component ────────────────────────────────────────────────────────────
 
 export default function NicheExplorer() {
@@ -198,14 +213,19 @@ export default function NicheExplorer() {
   const [mode, setMode] = useState('finder');
 
   // Finder
-  const [query,        setQuery]        = useState('');
-  const [searchResult, setSearchResult] = useState(null);
-  const [loadingSearch, setLoadingSearch] = useState(false);
-  const [searchError,  setSearchError]  = useState(null);
-  const [filters,      setFilters]      = useState(DEFAULT_FILTERS);
-  const [sortKey,      setSortKey]      = useState('default');
-  const [showFilters,  setShowFilters]  = useState(false);
-  const [viewMode,     setViewMode]     = useState('table');
+  const [query,          setQuery]          = useState('');
+  const [searchResult,   setSearchResult]   = useState(null);
+  const [allApps,        setAllApps]        = useState([]);
+  const [loadingSearch,  setLoadingSearch]  = useState(false);
+  const [loadingBatches, setLoadingBatches] = useState(false);
+  const [batchProgress,  setBatchProgress]  = useState(0);
+  const [searchError,    setSearchError]    = useState(null);
+  const [filters,        setFilters]        = useState(DEFAULT_FILTERS);
+  const [sortKey,        setSortKey]        = useState('default');
+  const [showFilters,    setShowFilters]    = useState(false);
+  const [viewMode,       setViewMode]       = useState('table');
+  const [titleMatchOnly, setTitleMatchOnly] = useState(true);
+  const searchIdRef = useRef(0);
 
   // Browse (unchanged)
   const [categories,   setCategories]   = useState([]);
@@ -247,11 +267,45 @@ export default function NicheExplorer() {
   const handleSearch = async (e) => {
     e?.preventDefault();
     if (!query.trim()) return;
-    setSearchResult(null); setSearchError(null); setLoadingSearch(true);
+    const sid = ++searchIdRef.current;
+    setSearchResult(null); setAllApps([]); setSearchError(null);
+    setLoadingSearch(true); setLoadingBatches(false); setBatchProgress(0);
     setFilters(DEFAULT_FILTERS); setSortKey('default');
-    try { const d = await nichesAPI.search(query.trim(), country); setSearchResult(d); }
-    catch (e) { setSearchError(e.message); }
-    finally { setLoadingSearch(false); }
+
+    try {
+      const d = await nichesAPI.search(query.trim(), country, 0);
+      if (searchIdRef.current !== sid) return;
+      setSearchResult(d);
+      const seen = new Set((d.apps || []).map(a => a.appId));
+      setAllApps(d.apps || []);
+      setLoadingSearch(false);
+
+      setLoadingBatches(true);
+      for (let batch = 1; batch <= 5; batch++) {
+        if (searchIdRef.current !== sid) break;
+        setBatchProgress(batch);
+        try {
+          const bd = await nichesAPI.search(query.trim(), country, batch);
+          if (searchIdRef.current !== sid) break;
+          const fresh = (bd.apps || []).filter(a => {
+            if (seen.has(a.appId)) return false;
+            seen.add(a.appId);
+            return true;
+          });
+          if (fresh.length) setAllApps(prev => [...prev, ...fresh]);
+        } catch { /* skip failed batches, continue loop */ }
+      }
+    } catch (err) {
+      if (searchIdRef.current === sid) {
+        setSearchError(err.message);
+        setLoadingSearch(false);
+      }
+    } finally {
+      if (searchIdRef.current === sid) {
+        setLoadingBatches(false);
+        setBatchProgress(0);
+      }
+    }
   };
 
   const handleCheckApps = async () => {
@@ -263,7 +317,8 @@ export default function NicheExplorer() {
     finally { setLoadingRemoved(false); }
   };
 
-  const filteredApps  = applySort(applyFilters(searchResult?.apps, filters), sortKey);
+  const keywordFiltered = applyKeywordFilter(allApps, query, titleMatchOnly);
+  const filteredApps    = applySort(applyFilters(keywordFiltered, filters), sortKey);
   const activeFilters = countActiveFilters(filters);
 
   const verdictStyle = v =>
@@ -379,7 +434,7 @@ export default function NicheExplorer() {
                         <div className="flex items-center gap-4 flex-wrap">
                           {[
                             { v: `${m.avgRating}★`,        l: 'Avg Rating',    c: 'text-yellow-400' },
-                            { v: searchResult.totalFound,   l: 'Apps Found',    c: 'text-ink-100' },
+                            { v: allApps.length,            l: 'Apps Found',    c: 'text-ink-100' },
                             { v: m.weakAppsCount,           l: 'Weak <4★',      c: 'text-red-400' },
                             { v: m.strongAppsCount,         l: 'Strong',        c: 'text-green-400' },
                             { v: m.abandonedCount,          l: 'Abandoned 1yr+',c: 'text-orange-400' },
@@ -415,6 +470,23 @@ export default function NicheExplorer() {
                   )}
                 </button>
 
+                {/* Keyword match toggle */}
+                <button
+                  onClick={() => setTitleMatchOnly(p => !p)}
+                  className={clsx('flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm transition-all',
+                    titleMatchOnly
+                      ? 'border-acid/40 bg-acid/10 text-acid'
+                      : 'border-ink-700 text-ink-400 hover:text-ink-200'
+                  )}
+                  title={titleMatchOnly ? 'Showing only apps with keyword in title/summary — click to show all' : 'Click to filter to exact keyword matches only'}
+                >
+                  <Search size={13} />
+                  Exact match
+                  {titleMatchOnly && (
+                    <span className="bg-acid text-ink-900 text-xs font-bold px-1.5 rounded-full leading-4">ON</span>
+                  )}
+                </button>
+
                 <select value={sortKey} onChange={e => setSortKey(e.target.value)} className="select text-sm">
                   {SORT_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
@@ -427,7 +499,18 @@ export default function NicheExplorer() {
                 )}
 
                 <div className="ml-auto flex items-center gap-3">
-                  <span className="text-xs text-ink-500">{filteredApps.length}/{searchResult.apps?.length} apps</span>
+                  {loadingBatches && (
+                    <span className="text-xs text-ink-500 flex items-center gap-1.5">
+                      <RefreshCw size={11} className="animate-spin text-acid" />
+                      Loading batch {batchProgress}/5…
+                    </span>
+                  )}
+                  <span className="text-xs text-ink-500">
+                    {filteredApps.length}/{allApps.length} apps
+                    {titleMatchOnly && allApps.length > keywordFiltered.length && (
+                      <span className="text-ink-600 ml-1">({allApps.length - keywordFiltered.length} filtered out)</span>
+                    )}
+                  </span>
                   <div className="flex bg-ink-800 border border-ink-700 rounded-lg p-0.5">
                     {[
                       { id: 'table', icon: <Table2 size={13} /> },
