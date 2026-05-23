@@ -207,12 +207,12 @@ router.get('/opportunities', async (req, res) => {
 // Batch query variants — each batch uses a different search query so repeated
 // fetches surface different apps (all deduplicated on the client).
 const BATCH_QUERIES = [
-  q => q,                    // 0 – exact term              e.g. "habit"
-  q => q + ' tracker',       // 1 – tracker compound        e.g. "habit tracker"
-  q => q + ' app',           // 2 – app compound            e.g. "habit app"
-  q => 'daily ' + q,         // 3 – daily prefix            e.g. "daily habit"
-  q => q + ' reminder',      // 4 – reminder compound       e.g. "habit reminder"
-  q => q + ' challenge',     // 5 – challenge compound      e.g. "habit challenge"
+  q => q,               // 0 – exact term
+  q => q + ' game',     // 1 – game variant
+  q => q + ' app',      // 2 – app variant
+  q => q + ' free',     // 3 – free variant
+  q => 'best ' + q,     // 4 – best variant
+  q => q + ' pro',      // 5 – pro variant
 ];
 
 // GET /api/niches/search?q=meditation&country=us&batch=0
