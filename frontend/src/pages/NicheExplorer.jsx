@@ -223,11 +223,10 @@ export default function NicheExplorer() {
   const [titleMatchOnly, setTitleMatchOnly] = useState(
     () => localStorage.getItem('titleMatchOnly') !== 'false'
   );
-  const [pagesLoaded,  setPagesLoaded]  = useState(0);
-  const [totalPages,   setTotalPages]   = useState(0);
   const [fetchingMore, setFetchingMore] = useState(false);
   const searchIdRef = useRef(0);
   const seenIdsRef  = useRef(new Set());
+  const nextPageRef = useRef(1);
 
   // Browse (unchanged)
   const [categories,   setCategories]   = useState([]);
@@ -271,58 +270,63 @@ export default function NicheExplorer() {
     finally { setLoadingNiche(false); }
   };
 
+  // Runs in background — fires pages in batches of 5, stops only when backend
+  // returns a full batch with zero new apps (truly exhausted). Never hard-stops
+  // at a fixed page count.
+  const runBackgroundFetch = async (q, country, sid) => {
+    setFetchingMore(true);
+    const BATCH = 5;
+    while (searchIdRef.current === sid) {
+      const start = nextPageRef.current;
+      const pages = Array.from({ length: BATCH }, (_, i) => start + i);
+      let anyNew = false;
+
+      await Promise.all(pages.map(async (pageNum) => {
+        try {
+          const res = await nichesAPI.search(q, country, pageNum);
+          if (searchIdRef.current !== sid) return;
+          const fresh = (res.apps || []).filter(a => !seenIdsRef.current.has(a.appId));
+          fresh.forEach(a => seenIdsRef.current.add(a.appId));
+          if (fresh.length) { setAllApps(prev => [...prev, ...fresh]); anyNew = true; }
+        } catch { /* page failure is non-fatal */ }
+      }));
+
+      nextPageRef.current += BATCH;
+      if (!anyNew) break; // backend returned empty — genuinely nothing left
+    }
+    if (searchIdRef.current === sid) setFetchingMore(false);
+  };
+
   const handleSearch = async (e) => {
     e?.preventDefault();
     if (!query.trim()) return;
     const sid = ++searchIdRef.current;
     seenIdsRef.current = new Set();
+    nextPageRef.current = 1;
     setSearchResult(null); setAllApps([]); setSearchError(null);
     setLoadingSearch(true); setFetchingMore(false);
-    setPagesLoaded(0); setTotalPages(0);
     setFilters(DEFAULT_FILTERS); setSortKey('default');
 
     try {
-      // Page 0: base query + suggestions — show results as soon as this returns
       const base = await nichesAPI.search(query.trim(), apiCountry, 0);
       if (searchIdRef.current !== sid) return;
-
-      const total = base.totalPages || 4;
       base.apps.forEach(a => seenIdsRef.current.add(a.appId));
       setSearchResult(base);
       setAllApps(base.apps || []);
-      setTotalPages(total);
-      setPagesLoaded(1);
       setLoadingSearch(false);
-
-      // Fire expansion pages in rolling batches of 5 so the count keeps climbing
-      // continuously rather than all firing at once and then stopping.
-      if (total > 1) {
-        setFetchingMore(true);
-        const BATCH = 5;
-        for (let start = 1; start < total; start += BATCH) {
-          if (searchIdRef.current !== sid) return;
-          const batch = Array.from(
-            { length: Math.min(BATCH, total - start) },
-            (_, i) => start + i
-          );
-          await Promise.all(batch.map(async (pageNum) => {
-            try {
-              const result = await nichesAPI.search(query.trim(), apiCountry, pageNum);
-              if (searchIdRef.current !== sid) return;
-              const newApps = (result.apps || []).filter(a => !seenIdsRef.current.has(a.appId));
-              newApps.forEach(a => seenIdsRef.current.add(a.appId));
-              if (newApps.length > 0) setAllApps(prev => [...prev, ...newApps]);
-              setPagesLoaded(prev => prev + 1);
-            } catch { /* individual page failure is non-fatal */ }
-          }));
-        }
-        if (searchIdRef.current === sid) setFetchingMore(false);
-      }
+      // Don't await — runs entirely in the background
+      runBackgroundFetch(query.trim(), apiCountry, sid);
     } catch (err) {
       if (searchIdRef.current === sid) {
         setSearchError(err.message);
         setLoadingSearch(false);
       }
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (!fetchingMore && searchResult) {
+      runBackgroundFetch(query.trim(), apiCountry, searchIdRef.current);
     }
   };
 
@@ -508,10 +512,14 @@ export default function NicheExplorer() {
                 )}
 
                 <div className="ml-auto flex items-center gap-3">
-                  {fetchingMore && (
-                    <RefreshCw size={11} className="animate-spin text-ink-500" />
-                  )}
-                  <span className="text-xs text-ink-500">{allApps.length} fetched · {filteredApps.length} visible</span>
+                  <button
+                    onClick={handleLoadMore}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ink-700 text-ink-400 hover:text-ink-200 hover:border-ink-500 text-xs transition-all"
+                  >
+                    <RefreshCw size={11} className={fetchingMore ? 'animate-spin text-acid' : ''} />
+                    {fetchingMore ? `Fetching… ${allApps.length} apps` : `Load More (${allApps.length} fetched)`}
+                  </button>
+                  <span className="text-xs text-ink-500">{filteredApps.length} visible</span>
                   <div className="flex bg-ink-800 border border-ink-700 rounded-lg p-0.5">
                     {[
                       { id: 'table', icon: <Table2 size={13} /> },

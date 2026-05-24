@@ -207,30 +207,54 @@ const CATEGORY_SWEEPS = [
   { category: 'SPORTS',             collection: 'TOP_FREE' },
 ];
 
-// Two-letter combos: aa-zz = 676 combos, 5 per page = 136 more pages
-const ALPHA = 'abcdefghijklmnopqrstuvwxyz';
-const TWO_LETTER_COMBOS = [];
-for (const c1 of ALPHA) for (const c2 of ALPHA) TWO_LETTER_COMBOS.push(`${c1}${c2}`);
-const TWO_LETTER_BATCH = 5;
-const TWO_LETTER_PAGES = Math.ceil(TWO_LETTER_COMBOS.length / TWO_LETTER_BATCH); // 136
+const ALPHA       = 'abcdefghijklmnopqrstuvwxyz';
+const COMBO_BATCH = 5;
 
-const STATIC_EXPANSION = SEARCH_GROUPS.length + CATEGORY_SWEEPS.length; // 20
-const TOTAL_PAGES = 1 + STATIC_EXPANSION + TWO_LETTER_PAGES; // 157
+// Two-letter combos aa-zz: 676 combos / 5 per page = 136 pages  (pages 21-156)
+// Three-letter combos aaa-zzz: 17576 combos / 5 per page = 3516 pages (pages 157-3672)
+// Practically inexhaustible — frontend will stop when it gets empty batches.
+const TWO_LETTER_PAGES   = Math.ceil(676  / COMBO_BATCH); // 136
+const THREE_LETTER_PAGES = Math.ceil(17576 / COMBO_BATCH); // 3516
+const STATIC_EXPANSION   = SEARCH_GROUPS.length + CATEGORY_SWEEPS.length; // 20
+const TOTAL_PAGES        = 1 + STATIC_EXPANSION + TWO_LETTER_PAGES + THREE_LETTER_PAGES; // 3673
+
+function nthTwoLetter(n) {
+  return ALPHA[Math.floor(n / 26)] + ALPHA[n % 26];
+}
+function nthThreeLetter(n) {
+  return ALPHA[Math.floor(n / 676)] + ALPHA[Math.floor(n / 26) % 26] + ALPHA[n % 26];
+}
 
 // Resolve what a given expansion page (1-based) should fetch
 function getPageDef(pageNum, baseQuery) {
+  // Single-char / word groups (pages 1-10)
   if (pageNum <= SEARCH_GROUPS.length) {
     return { type: 'search', terms: SEARCH_GROUPS[pageNum - 1].map(t => `${baseQuery} ${t}`) };
   }
+  // Category sweeps (pages 11-20)
   const catIdx = pageNum - SEARCH_GROUPS.length - 1;
   if (catIdx < CATEGORY_SWEEPS.length) {
     return { type: 'category', ...CATEGORY_SWEEPS[catIdx] };
   }
-  const twoIdx = pageNum - SEARCH_GROUPS.length - CATEGORY_SWEEPS.length - 1;
-  const start  = twoIdx * TWO_LETTER_BATCH;
-  const combos = TWO_LETTER_COMBOS.slice(start, start + TWO_LETTER_BATCH);
-  if (!combos.length) return null;
-  return { type: 'search', terms: combos.map(c => `${baseQuery} ${c}`) };
+  // Two-letter combos aa-zz (pages 21-156)
+  const twoIdx = pageNum - STATIC_EXPANSION - 1;
+  if (twoIdx < TWO_LETTER_PAGES) {
+    const start = twoIdx * COMBO_BATCH;
+    const terms = Array.from({ length: COMBO_BATCH }, (_, i) => start + i)
+      .filter(i => i < 676)
+      .map(i => `${baseQuery} ${nthTwoLetter(i)}`);
+    return terms.length ? { type: 'search', terms } : null;
+  }
+  // Three-letter combos aaa-zzz (pages 157-3672)
+  const threeIdx = pageNum - STATIC_EXPANSION - TWO_LETTER_PAGES - 1;
+  if (threeIdx < THREE_LETTER_PAGES) {
+    const start = threeIdx * COMBO_BATCH;
+    const terms = Array.from({ length: COMBO_BATCH }, (_, i) => start + i)
+      .filter(i => i < 17576)
+      .map(i => `${baseQuery} ${nthThreeLetter(i)}`);
+    return terms.length ? { type: 'search', terms } : null;
+  }
+  return null;
 }
 
 // GET /api/niches/categories
@@ -351,7 +375,7 @@ router.get('/search', async (req, res) => {
   if (!q?.trim()) return res.status(400).json({ error: 'q is required' });
 
   const baseQuery = q.trim().toLowerCase();
-  const pageNum   = Math.max(0, Math.min(parseInt(page, 10) || 0, TOTAL_PAGES - 1));
+  const pageNum   = Math.max(0, parseInt(page, 10) || 0);
   const cacheKey  = `niche-v10:${baseQuery}:${country}:p${pageNum}`;
   const cached    = getCached(cacheKey);
   if (cached) return res.json(cached);
