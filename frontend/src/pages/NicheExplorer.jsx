@@ -223,7 +223,11 @@ export default function NicheExplorer() {
   const [titleMatchOnly, setTitleMatchOnly] = useState(
     () => localStorage.getItem('titleMatchOnly') !== 'false'
   );
+  const [pagesLoaded,  setPagesLoaded]  = useState(0);
+  const [totalPages,   setTotalPages]   = useState(0);
+  const [fetchingMore, setFetchingMore] = useState(false);
   const searchIdRef = useRef(0);
+  const seenIdsRef  = useRef(new Set());
 
   // Browse (unchanged)
   const [categories,   setCategories]   = useState([]);
@@ -271,19 +275,47 @@ export default function NicheExplorer() {
     e?.preventDefault();
     if (!query.trim()) return;
     const sid = ++searchIdRef.current;
+    seenIdsRef.current = new Set();
     setSearchResult(null); setAllApps([]); setSearchError(null);
-    setLoadingSearch(true);
+    setLoadingSearch(true); setFetchingMore(false);
+    setPagesLoaded(0); setTotalPages(0);
     setFilters(DEFAULT_FILTERS); setSortKey('default');
 
     try {
-      const d = await nichesAPI.search(query.trim(), apiCountry);
+      // Page 0: base query + suggestions — show results as soon as this returns
+      const base = await nichesAPI.search(query.trim(), apiCountry, 0);
       if (searchIdRef.current !== sid) return;
-      setSearchResult(d);
-      setAllApps(d.apps || []);
+
+      const total = base.totalPages || 4;
+      base.apps.forEach(a => seenIdsRef.current.add(a.appId));
+      setSearchResult(base);
+      setAllApps(base.apps || []);
+      setTotalPages(total);
+      setPagesLoaded(1);
+      setLoadingSearch(false);
+
+      // Pages 1–3: alphabet expansion — fire in parallel, merge as each arrives
+      if (total > 1) {
+        setFetchingMore(true);
+        await Promise.all(
+          Array.from({ length: total - 1 }, (_, i) => i + 1).map(async (pageNum) => {
+            try {
+              const result = await nichesAPI.search(query.trim(), apiCountry, pageNum);
+              if (searchIdRef.current !== sid) return;
+              const newApps = (result.apps || []).filter(a => !seenIdsRef.current.has(a.appId));
+              newApps.forEach(a => seenIdsRef.current.add(a.appId));
+              if (newApps.length > 0) setAllApps(prev => [...prev, ...newApps]);
+              setPagesLoaded(prev => prev + 1);
+            } catch { /* individual page failure is non-fatal */ }
+          })
+        );
+        if (searchIdRef.current === sid) setFetchingMore(false);
+      }
     } catch (err) {
-      if (searchIdRef.current === sid) setSearchError(err.message);
-    } finally {
-      if (searchIdRef.current === sid) setLoadingSearch(false);
+      if (searchIdRef.current === sid) {
+        setSearchError(err.message);
+        setLoadingSearch(false);
+      }
     }
   };
 
@@ -469,7 +501,16 @@ export default function NicheExplorer() {
                 )}
 
                 <div className="ml-auto flex items-center gap-3">
-                  <span className="text-xs text-ink-500">{filteredApps.length} apps</span>
+                  {fetchingMore && (
+                    <span className="text-xs text-ink-500 flex items-center gap-1.5">
+                      <RefreshCw size={11} className="animate-spin text-acid" />
+                      fetching more… ({pagesLoaded}/{totalPages})
+                    </span>
+                  )}
+                  {!fetchingMore && pagesLoaded > 0 && (
+                    <span className="text-xs text-ink-600">{pagesLoaded}/{totalPages} pages</span>
+                  )}
+                  <span className="text-xs text-ink-500">{allApps.length} fetched · {filteredApps.length} visible</span>
                   <div className="flex bg-ink-800 border border-ink-700 rounded-lg p-0.5">
                     {[
                       { id: 'table', icon: <Table2 size={13} /> },
