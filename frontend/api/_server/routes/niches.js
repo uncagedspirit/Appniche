@@ -180,37 +180,58 @@ function computeMetrics(enriched) {
 }
 
 // Two types of expansion pages:
-//   Search pages  (type:'search')   — keyword variants with num:30 so each gplay.search
-//                                     is a SINGLE internal HTTP request (~1-2 s), safely
-//                                     under Vercel's 10 s serverless timeout.
-//   Category pages (type:'category') — gplay.list() sweeps; returns completely different
-//                                     apps not reachable through keyword search at all.
-const EXPANSION_PAGES = [
-  // ── Alphabet + digit keyword variants ────────────────────────────────────
-  { type: 'search', terms: ['a','b','c','d','e'] },
-  { type: 'search', terms: ['f','g','h','i','j'] },
-  { type: 'search', terms: ['k','l','m','n','o'] },
-  { type: 'search', terms: ['p','q','r','s','t'] },
-  { type: 'search', terms: ['u','v','w','x','y','z'] },
-  { type: 'search', terms: ['0','1','2','3','4','5','6','7','8','9'] },
-  // ── Semantic modifier words (return different tail apps vs single chars) ─
-  { type: 'search', terms: ['app','free','pro','best','top'] },
-  { type: 'search', terms: ['daily','timer','music','sleep','calm'] },
-  { type: 'search', terms: ['relax','focus','stress','anxiety','mindful'] },
-  { type: 'search', terms: ['breathing','yoga','sounds','morning','guided'] },
-  // ── Category sweeps — completely orthogonal to search results ────────────
-  { type: 'category', category: 'HEALTH_AND_FITNESS', collection: 'TOP_FREE' },
-  { type: 'category', category: 'HEALTH_AND_FITNESS', collection: 'TOP_GROSSING' },
-  { type: 'category', category: 'HEALTH_AND_FITNESS', collection: 'NEW_FREE' },
-  { type: 'category', category: 'LIFESTYLE',          collection: 'TOP_FREE' },
-  { type: 'category', category: 'LIFESTYLE',          collection: 'TOP_GROSSING' },
-  { type: 'category', category: 'MEDICAL',            collection: 'TOP_FREE' },
-  { type: 'category', category: 'MUSIC_AND_AUDIO',    collection: 'TOP_FREE' },
-  { type: 'category', category: 'EDUCATION',          collection: 'TOP_FREE' },
-  { type: 'category', category: 'PRODUCTIVITY',       collection: 'TOP_FREE' },
-  { type: 'category', category: 'SPORTS',             collection: 'TOP_FREE' },
+// Static expansion groups — pages 1-20
+const SEARCH_GROUPS = [
+  ['a','b','c','d','e'],
+  ['f','g','h','i','j'],
+  ['k','l','m','n','o'],
+  ['p','q','r','s','t'],
+  ['u','v','w','x','y','z'],
+  ['0','1','2','3','4','5','6','7','8','9'],
+  ['app','free','pro','best','top'],
+  ['daily','timer','music','sleep','calm'],
+  ['relax','focus','stress','anxiety','mindful'],
+  ['breathing','yoga','sounds','morning','guided'],
 ];
-const TOTAL_PAGES = 1 + EXPANSION_PAGES.length;
+
+const CATEGORY_SWEEPS = [
+  { category: 'HEALTH_AND_FITNESS', collection: 'TOP_FREE' },
+  { category: 'HEALTH_AND_FITNESS', collection: 'TOP_GROSSING' },
+  { category: 'HEALTH_AND_FITNESS', collection: 'NEW_FREE' },
+  { category: 'LIFESTYLE',          collection: 'TOP_FREE' },
+  { category: 'LIFESTYLE',          collection: 'TOP_GROSSING' },
+  { category: 'MEDICAL',            collection: 'TOP_FREE' },
+  { category: 'MUSIC_AND_AUDIO',    collection: 'TOP_FREE' },
+  { category: 'EDUCATION',          collection: 'TOP_FREE' },
+  { category: 'PRODUCTIVITY',       collection: 'TOP_FREE' },
+  { category: 'SPORTS',             collection: 'TOP_FREE' },
+];
+
+// Two-letter combos: aa-zz = 676 combos, 5 per page = 136 more pages
+const ALPHA = 'abcdefghijklmnopqrstuvwxyz';
+const TWO_LETTER_COMBOS = [];
+for (const c1 of ALPHA) for (const c2 of ALPHA) TWO_LETTER_COMBOS.push(`${c1}${c2}`);
+const TWO_LETTER_BATCH = 5;
+const TWO_LETTER_PAGES = Math.ceil(TWO_LETTER_COMBOS.length / TWO_LETTER_BATCH); // 136
+
+const STATIC_EXPANSION = SEARCH_GROUPS.length + CATEGORY_SWEEPS.length; // 20
+const TOTAL_PAGES = 1 + STATIC_EXPANSION + TWO_LETTER_PAGES; // 157
+
+// Resolve what a given expansion page (1-based) should fetch
+function getPageDef(pageNum, baseQuery) {
+  if (pageNum <= SEARCH_GROUPS.length) {
+    return { type: 'search', terms: SEARCH_GROUPS[pageNum - 1].map(t => `${baseQuery} ${t}`) };
+  }
+  const catIdx = pageNum - SEARCH_GROUPS.length - 1;
+  if (catIdx < CATEGORY_SWEEPS.length) {
+    return { type: 'category', ...CATEGORY_SWEEPS[catIdx] };
+  }
+  const twoIdx = pageNum - SEARCH_GROUPS.length - CATEGORY_SWEEPS.length - 1;
+  const start  = twoIdx * TWO_LETTER_BATCH;
+  const combos = TWO_LETTER_COMBOS.slice(start, start + TWO_LETTER_BATCH);
+  if (!combos.length) return null;
+  return { type: 'search', terms: combos.map(c => `${baseQuery} ${c}`) };
+}
 
 // GET /api/niches/categories
 router.get('/categories', (req, res) => {
@@ -395,15 +416,14 @@ router.get('/search', async (req, res) => {
       return res.json(result);
 
     } else {
-      const pageDef = EXPANSION_PAGES[pageNum - 1];
+      const pageDef = getPageDef(pageNum, baseQuery);
       if (!pageDef) return res.json({ query: q, apps: [], page: pageNum, totalPages: TOTAL_PAGES });
 
       let allBasic = [];
 
       if (pageDef.type === 'search') {
         // ── Keyword variant search ───────────────────────────────────────────
-        const terms   = pageDef.terms.map(t => `${baseQuery} ${t}`);
-        const results = await Promise.all(terms.map(searchOne));
+        const results = await Promise.all(pageDef.terms.map(searchOne));
         const seen = new Set();
         for (const app of results.flat()) {
           if (!app?.appId || seen.has(app.appId)) continue;

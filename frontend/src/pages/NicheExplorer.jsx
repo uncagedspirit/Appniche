@@ -294,11 +294,18 @@ export default function NicheExplorer() {
       setPagesLoaded(1);
       setLoadingSearch(false);
 
-      // Pages 1–3: alphabet expansion — fire in parallel, merge as each arrives
+      // Fire expansion pages in rolling batches of 5 so the count keeps climbing
+      // continuously rather than all firing at once and then stopping.
       if (total > 1) {
         setFetchingMore(true);
-        await Promise.all(
-          Array.from({ length: total - 1 }, (_, i) => i + 1).map(async (pageNum) => {
+        const BATCH = 5;
+        for (let start = 1; start < total; start += BATCH) {
+          if (searchIdRef.current !== sid) return;
+          const batch = Array.from(
+            { length: Math.min(BATCH, total - start) },
+            (_, i) => start + i
+          );
+          await Promise.all(batch.map(async (pageNum) => {
             try {
               const result = await nichesAPI.search(query.trim(), apiCountry, pageNum);
               if (searchIdRef.current !== sid) return;
@@ -307,8 +314,8 @@ export default function NicheExplorer() {
               if (newApps.length > 0) setAllApps(prev => [...prev, ...newApps]);
               setPagesLoaded(prev => prev + 1);
             } catch { /* individual page failure is non-fatal */ }
-          })
-        );
+          }));
+        }
         if (searchIdRef.current === sid) setFetchingMore(false);
       }
     } catch (err) {
