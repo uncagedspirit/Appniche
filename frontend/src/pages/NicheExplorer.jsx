@@ -502,13 +502,7 @@ export default function NicheExplorer() {
 
                 <div className="ml-auto flex items-center gap-3">
                   {fetchingMore && (
-                    <span className="text-xs text-ink-500 flex items-center gap-1.5">
-                      <RefreshCw size={11} className="animate-spin text-acid" />
-                      fetching more… ({pagesLoaded}/{totalPages})
-                    </span>
-                  )}
-                  {!fetchingMore && pagesLoaded > 0 && (
-                    <span className="text-xs text-ink-600">{pagesLoaded}/{totalPages} pages</span>
+                    <RefreshCw size={11} className="animate-spin text-ink-500" />
                   )}
                   <span className="text-xs text-ink-500">{allApps.length} fetched · {filteredApps.length} visible</span>
                   <div className="flex bg-ink-800 border border-ink-700 rounded-lg p-0.5">

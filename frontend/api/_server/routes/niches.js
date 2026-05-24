@@ -179,27 +179,38 @@ function computeMetrics(enriched) {
   };
 }
 
-// Each page fires 5-6 search variants in parallel — small enough to avoid rate limiting,
-// many enough pages to surface a large portion of the long tail.
-// Total: 12 expansion pages × ~5 terms × ~200 unique results ≈ 5,000–8,000 apps after dedup.
-const EXPANSION_GROUPS = [
-  // Single-letter alphabet — split into 5-char batches (pages 1–6)
-  ['a','b','c','d','e'],
-  ['f','g','h','i','j'],
-  ['k','l','m','n','o'],
-  ['p','q','r','s','t'],
-  ['u','v','w','x','y','z'],
-  // Digits (page 6)
-  ['0','1','2','3','4','5','6','7','8','9'],
-  // Common modifier words — surfaces tail apps that single-char misses (pages 7–12)
-  ['app','free','pro','best','top'],
-  ['plus','lite','premium','new','2024'],
-  ['daily','guided','beginner','timer','music'],
-  ['sleep','calm','relax','focus','stress'],
-  ['anxiety','mindful','breathing','yoga','sounds'],
-  ['for','morning','evening','quick','simple'],
+// Two types of expansion pages:
+//   Search pages  (type:'search')   — keyword variants with num:30 so each gplay.search
+//                                     is a SINGLE internal HTTP request (~1-2 s), safely
+//                                     under Vercel's 10 s serverless timeout.
+//   Category pages (type:'category') — gplay.list() sweeps; returns completely different
+//                                     apps not reachable through keyword search at all.
+const EXPANSION_PAGES = [
+  // ── Alphabet + digit keyword variants ────────────────────────────────────
+  { type: 'search', terms: ['a','b','c','d','e'] },
+  { type: 'search', terms: ['f','g','h','i','j'] },
+  { type: 'search', terms: ['k','l','m','n','o'] },
+  { type: 'search', terms: ['p','q','r','s','t'] },
+  { type: 'search', terms: ['u','v','w','x','y','z'] },
+  { type: 'search', terms: ['0','1','2','3','4','5','6','7','8','9'] },
+  // ── Semantic modifier words (return different tail apps vs single chars) ─
+  { type: 'search', terms: ['app','free','pro','best','top'] },
+  { type: 'search', terms: ['daily','timer','music','sleep','calm'] },
+  { type: 'search', terms: ['relax','focus','stress','anxiety','mindful'] },
+  { type: 'search', terms: ['breathing','yoga','sounds','morning','guided'] },
+  // ── Category sweeps — completely orthogonal to search results ────────────
+  { type: 'category', category: 'HEALTH_AND_FITNESS', collection: 'TOP_FREE' },
+  { type: 'category', category: 'HEALTH_AND_FITNESS', collection: 'TOP_GROSSING' },
+  { type: 'category', category: 'HEALTH_AND_FITNESS', collection: 'NEW_FREE' },
+  { type: 'category', category: 'LIFESTYLE',          collection: 'TOP_FREE' },
+  { type: 'category', category: 'LIFESTYLE',          collection: 'TOP_GROSSING' },
+  { type: 'category', category: 'MEDICAL',            collection: 'TOP_FREE' },
+  { type: 'category', category: 'MUSIC_AND_AUDIO',    collection: 'TOP_FREE' },
+  { type: 'category', category: 'EDUCATION',          collection: 'TOP_FREE' },
+  { type: 'category', category: 'PRODUCTIVITY',       collection: 'TOP_FREE' },
+  { type: 'category', category: 'SPORTS',             collection: 'TOP_FREE' },
 ];
-const TOTAL_PAGES = 1 + EXPANSION_GROUPS.length; // page 0 (base) + expansion pages
+const TOTAL_PAGES = 1 + EXPANSION_PAGES.length;
 
 // GET /api/niches/categories
 router.get('/categories', (req, res) => {
@@ -309,46 +320,46 @@ router.get('/opportunities', async (req, res) => {
 
 // GET /api/niches/search?q=meditation&country=us&page=0
 //
-// page=0 (default): base query + autocomplete suggestions — enriched, returns metrics
-// page=1: alphabet a–m expansion
-// page=2: alphabet n–z expansion
-// page=3: digits 0–9 expansion
-//
-// Splitting into pages means each backend call fires ~13 parallel sub-requests
-// instead of all 36 at once, avoiding rate-limiting and surfacing more apps.
+// page=0            : base query + autocomplete suggestions, enriched, returns metrics
+// pages 1–10        : keyword variant search (num:30 each — one internal HTTP call,
+//                     safely under Vercel's 10 s serverless timeout)
+// pages 11–20       : category chart sweep via gplay.list() — surfaces apps that
+//                     never appear in keyword search results
 router.get('/search', async (req, res) => {
   const { q, country = 'us', lang = 'en', page = '0' } = req.query;
   if (!q?.trim()) return res.status(400).json({ error: 'q is required' });
 
   const baseQuery = q.trim().toLowerCase();
   const pageNum   = Math.max(0, Math.min(parseInt(page, 10) || 0, TOTAL_PAGES - 1));
-  const cacheKey  = `niche-v9:${baseQuery}:${country}:p${pageNum}`;
+  const cacheKey  = `niche-v10:${baseQuery}:${country}:p${pageNum}`;
   const cached    = getCached(cacheKey);
   if (cached) return res.json(cached);
 
-  const searchOne = (term) =>
-    gplay.search({ term, country, lang, num: 250, fullDetail: false }).catch(() => []);
-
   const now = Date.now();
+
+  // num:30 = single internal HTTP call to Google Play (~1-2 s), no timeout risk
+  const searchOne = (term) =>
+    gplay.search({ term, country, lang, num: 30, fullDetail: false }).catch(() => []);
 
   try {
     if (pageNum === 0) {
-      // ── Base page: query + autocomplete suggestions ──────────────────────────
+      // ── Base page: use num:250 here only — this is the most important fetch ──
+      const searchBase = (term) =>
+        gplay.search({ term, country, lang, num: 250, fullDetail: false }).catch(() => []);
+
       const [baseApps, suggestions] = await Promise.all([
-        searchOne(baseQuery),
+        searchBase(baseQuery),
         gplay.suggest({ term: baseQuery, country, lang }).catch(() => []),
       ]);
 
-      // Search suggestion terms that include the first seed word
       const seed = baseQuery.split(/\s+/)[0];
       const suggestionTerms = (suggestions || [])
         .map(s => (s || '').toString().trim().toLowerCase())
         .filter(t => t && t !== baseQuery && t.includes(seed))
-        .slice(0, 10);
+        .slice(0, 8);
 
-      const suggestionResults = await Promise.all(suggestionTerms.map(searchOne));
+      const suggestionResults = await Promise.all(suggestionTerms.map(searchBase));
 
-      // Dedupe base + suggestions
       const seen = new Set();
       const allBasic = [];
       for (const app of [...baseApps, ...suggestionResults.flat()]) {
@@ -384,19 +395,35 @@ router.get('/search', async (req, res) => {
       return res.json(result);
 
     } else {
-      // ── Expansion page: fetch one alphabet/digit group ───────────────────────
-      const chars = EXPANSION_GROUPS[pageNum - 1];
-      if (!chars) return res.json({ query: q, apps: [], page: pageNum, totalPages: TOTAL_PAGES });
+      const pageDef = EXPANSION_PAGES[pageNum - 1];
+      if (!pageDef) return res.json({ query: q, apps: [], page: pageNum, totalPages: TOTAL_PAGES });
 
-      const terms   = chars.map(c => `${baseQuery} ${c}`);
-      const results = await Promise.all(terms.map(searchOne));
+      let allBasic = [];
 
-      const seen = new Set();
-      const allBasic = [];
-      for (const app of results.flat()) {
-        if (!app?.appId || seen.has(app.appId)) continue;
-        seen.add(app.appId);
-        allBasic.push(app);
+      if (pageDef.type === 'search') {
+        // ── Keyword variant search ───────────────────────────────────────────
+        const terms   = pageDef.terms.map(t => `${baseQuery} ${t}`);
+        const results = await Promise.all(terms.map(searchOne));
+        const seen = new Set();
+        for (const app of results.flat()) {
+          if (!app?.appId || seen.has(app.appId)) continue;
+          seen.add(app.appId);
+          allBasic.push(app);
+        }
+
+      } else {
+        // ── Category chart sweep ─────────────────────────────────────────────
+        const col = gplay.collection[pageDef.collection] || gplay.collection.TOP_FREE;
+        const cat = gplay.category[pageDef.category];
+        if (!cat) return res.json({ query: q, apps: [], page: pageNum, totalPages: TOTAL_PAGES });
+
+        const apps = await gplay.list({ category: cat, collection: col, num: 120, country, lang }).catch(() => []);
+        const seen = new Set();
+        for (const app of apps) {
+          if (!app?.appId || seen.has(app.appId)) continue;
+          seen.add(app.appId);
+          allBasic.push(app);
+        }
       }
 
       const enriched = allBasic.map(app => enrichApp(app, now));
