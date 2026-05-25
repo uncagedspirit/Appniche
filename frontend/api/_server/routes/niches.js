@@ -93,12 +93,7 @@ function enrichApp(app, now) {
   const daysSinceUpdate  = updatedDate  ? Math.floor((now - updatedDate.getTime())  / 86400000) : null;
   const daysSinceRelease = releasedDate ? Math.floor((now - releasedDate.getTime()) / 86400000) : null;
   const minInst = app.minInstalls != null ? app.minInstalls : parseInstalls(app.installs);
-  const effectiveDays = (daysSinceRelease && daysSinceRelease > 0)
-    ? daysSinceRelease
-    : (daysSinceUpdate && daysSinceUpdate > 0)
-      ? daysSinceUpdate
-      : 365;
-  const dailyInstalls   = minInst > 0 ? Math.round(minInst / effectiveDays) : null;
+  const dailyInstalls   = (daysSinceRelease && daysSinceRelease > 0) ? Math.round(minInst / daysSinceRelease) : null;
   const monthlyInstalls = dailyInstalls != null ? dailyInstalls * 30 : null;
 
   return {
