@@ -4,6 +4,7 @@ import Landing from './pages/Landing.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import KeywordResearch from './pages/KeywordResearch.jsx';
 import NicheExplorer from './pages/NicheExplorer.jsx';
+import MarketExplorer from './pages/MarketExplorer.jsx';
 import AppAnalyzer from './pages/AppAnalyzer.jsx';
 import IdeaGenerator from './pages/IdeaGenerator.jsx';
 import ASOOptimizer from './pages/ASOOptimizer.jsx';
@@ -17,6 +18,7 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="keywords" element={<KeywordResearch />} />
         <Route path="niches" element={<NicheExplorer />} />
+        <Route path="market" element={<MarketExplorer />} />
         <Route path="analyzer" element={<AppAnalyzer />} />
         <Route path="ideas" element={<IdeaGenerator />} />
         <Route path="aso" element={<ASOOptimizer />} />

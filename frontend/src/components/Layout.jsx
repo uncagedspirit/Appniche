@@ -1,7 +1,7 @@
 import { Outlet, NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Search, Compass, Smartphone,
-  Lightbulb, Zap, Bookmark
+  Lightbulb, Zap, Bookmark, FlaskConical,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -9,6 +9,7 @@ const NAV = [
   { to: '/app',          label: 'Market Explorer', icon: LayoutDashboard, end: true },
   { to: '/app/keywords', label: 'Keywords',         icon: Search },
   { to: '/app/niches',   label: 'Niche Finder',     icon: Compass },
+  { to: '/app/market',   label: 'Combined Tool',    icon: FlaskConical, badge: 'New' },
   { to: '/app/analyzer', label: 'App Analyzer',     icon: Smartphone },
   { to: '/app/ideas',    label: 'Idea Generator',   icon: Lightbulb },
   { to: '/app/aso',      label: 'ASO Optimizer',    icon: Zap },
@@ -34,7 +35,7 @@ export default function Layout() {
 
         {/* Nav */}
         <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto no-scrollbar">
-          {NAV.map(({ to, label, icon: Icon, end }) => (
+          {NAV.map(({ to, label, icon: Icon, end, badge }) => (
             <NavLink
               key={to}
               to={to}
@@ -53,7 +54,12 @@ export default function Layout() {
                     className={isActive ? 'text-blue-600' : 'text-slate-400'}
                     strokeWidth={isActive ? 2.5 : 2}
                   />
-                  {label}
+                  <span className="flex-1">{label}</span>
+                  {badge && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-600">
+                      {badge}
+                    </span>
+                  )}
                 </>
               )}
             </NavLink>
