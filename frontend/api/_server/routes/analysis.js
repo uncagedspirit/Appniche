@@ -251,6 +251,95 @@ Generate optimized ASO metadata. Return JSON:
   }
 });
 
+// POST /api/analysis/review-intelligence
+// Body: { appId, platform, country, lang }
+router.post('/review-intelligence', async (req, res) => {
+  const { appId, platform = 'android', country = 'us', lang = 'en' } = req.body;
+  if (!appId) return res.status(400).json({ error: 'appId is required' });
+
+  const cacheKey = `review-intel:${appId}:${platform}:${country}`;
+  const cached = getCached(cacheKey);
+  if (cached) return res.json(cached);
+
+  try {
+    let appDetail, rawReviews;
+    if (platform === 'android') {
+      [appDetail, { data: rawReviews }] = await Promise.all([
+        gplay.app({ appId, country, lang }),
+        gplay.reviews({ appId, sort: gplay.sort.NEWEST, num: 500, lang, country }),
+      ]);
+    } else {
+      const store = (await import('app-store-scraper')).default;
+      [appDetail, rawReviews] = await Promise.all([
+        store.app({ id: appId, country }),
+        store.reviews({ id: appId, sort: store.sort.RECENT, page: 1, country }),
+      ]);
+    }
+
+    const reviews = (rawReviews || []).filter(r => r.text && r.text.length > 15).slice(0, 300);
+    const reviewBlock = reviews
+      .map(r => `[${r.score}★] ${r.text.slice(0, 200)}`)
+      .join('\n');
+
+    const systemPrompt = `You are an expert product analyst specializing in user feedback. Analyze app reviews and produce a structured feature-level intelligence report. Be specific and quote actual review text where relevant. Respond ONLY with valid JSON.`;
+
+    const userPrompt = `App: "${appDetail.title}" — ${appDetail.score}/5 stars, ${appDetail.reviews} total reviews
+Platform: ${platform}
+
+${reviews.length} recent reviews to analyze:
+${reviewBlock.slice(0, 8000)}
+
+Return JSON with this exact structure:
+{
+  "appName": "string",
+  "totalAnalyzed": ${reviews.length},
+  "overallSentiment": "positive|mixed|negative",
+  "sentimentScore": 0-100,
+  "featureTags": [
+    {
+      "tag": "Category name (e.g. Bugs, Performance, UI/UX, Onboarding, Pricing, Missing Features, Customer Support, Crashes)",
+      "count": number,
+      "pct": number,
+      "sentiment": "positive|negative|mixed",
+      "summary": "1-sentence summary of what users say about this",
+      "topQuotes": ["quote1", "quote2"]
+    }
+  ],
+  "topComplaints": [
+    { "issue": "string", "frequency": "high|medium|low", "impactOnRating": "high|medium|low", "quote": "string" }
+  ],
+  "topPraises": [
+    { "strength": "string", "frequency": "high|medium|low", "quote": "string" }
+  ],
+  "featureRequests": [
+    { "feature": "string", "requestCount": "many|some|few", "businessValue": "high|medium|low" }
+  ],
+  "competitiveOpportunity": "2-sentence description of how a competitor could exploit these weaknesses",
+  "executiveSummary": "3-sentence overview for a product manager"
+}`;
+
+    const raw = await callClaude(systemPrompt, userPrompt);
+    const intel = JSON.parse(raw.replace(/```json|```/gi, '').trim());
+
+    const result = {
+      appId,
+      platform,
+      country,
+      appName: appDetail.title,
+      appIcon: appDetail.icon,
+      appScore: appDetail.score,
+      appReviews: appDetail.reviews,
+      analyzedAt: new Date().toISOString(),
+      ...intel,
+    };
+
+    setCache(cacheKey, result, 7200);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // POST /api/analysis/market-report
 // Body: { niche, country, lang }
 router.post('/market-report', async (req, res) => {
