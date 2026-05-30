@@ -4,6 +4,7 @@ const KEYS = {
   ideas: 'appniche_ideas',
   tracked: 'appniche_tracked',
   collections: 'appniche_collections',
+  watchlist: 'appniche_watchlist',
 };
 
 const read = (key) => {
@@ -82,4 +83,21 @@ export const dbOps = {
 
   async setUserProfile(_uid, _data) {},
   async getUserProfile(_uid) { return null; },
+
+  async addToWatchlist(_uid, appData) {
+    const id = `${appData.platform}_${appData.appId}`;
+    const items = read(KEYS.watchlist).filter(x => x.id !== id);
+    write(KEYS.watchlist, [{ id, ...appData, addedAt: new Date().toISOString(), snapshot: appData.snapshot || null }, ...items]);
+  },
+  async getWatchlist(_uid) {
+    return read(KEYS.watchlist);
+  },
+  async removeFromWatchlist(_uid, appId, platform) {
+    write(KEYS.watchlist, read(KEYS.watchlist).filter(x => x.id !== `${platform}_${appId}`));
+  },
+  async updateWatchlistSnapshot(_uid, appId, platform, snapshot) {
+    write(KEYS.watchlist, read(KEYS.watchlist).map(x =>
+      x.id === `${platform}_${appId}` ? { ...x, snapshot, lastChecked: new Date().toISOString() } : x
+    ));
+  },
 };
