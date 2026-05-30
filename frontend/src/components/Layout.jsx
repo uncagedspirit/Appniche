@@ -1,7 +1,7 @@
 import { Outlet, NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Search, Compass, Smartphone,
-  Lightbulb, Zap, Bookmark, FlaskConical, FileText, MessageSquare, Eye,
+  Lightbulb, Zap, Bookmark, FlaskConical, FileText, MessageSquare, Eye, CheckSquare,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -15,6 +15,7 @@ const NAV = [
   { to: '/app/report',   label: 'Market Report',    icon: FileText, badge: 'New' },
   { to: '/app/reviews',   label: 'Review Intel',     icon: MessageSquare, badge: 'New' },
   { to: '/app/watchlist', label: 'Watchlist',        icon: Eye },
+  { to: '/app/validate',  label: 'Idea Validator',   icon: CheckSquare, badge: 'New' },
   { to: '/app/aso',      label: 'ASO Optimizer',    icon: Zap },
   { to: '/app/saved',    label: 'Saved',             icon: Bookmark },
 ];

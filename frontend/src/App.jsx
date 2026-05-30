@@ -12,6 +12,7 @@ import SavedItems from './pages/SavedItems.jsx';
 import MarketReport from './pages/MarketReport.jsx';
 import ReviewIntelligence from './pages/ReviewIntelligence.jsx';
 import Watchlist from './pages/Watchlist.jsx';
+import IdeaValidator from './pages/IdeaValidator.jsx';
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="report" element={<MarketReport />} />
         <Route path="reviews" element={<ReviewIntelligence />} />
         <Route path="watchlist" element={<Watchlist />} />
+        <Route path="validate" element={<IdeaValidator />} />
       </Route>
     </Routes>
   );

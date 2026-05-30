@@ -74,6 +74,9 @@ export const analysisAPI = {
 
   reviewIntelligence: (appId, platform = 'android', country = 'us') =>
     api.post('/analysis/review-intelligence', { appId, platform, country }),
+
+  validateIdea: (idea, country = 'us') =>
+    api.post('/analysis/validate-idea', { idea, country }),
 };
 
 export default api;
