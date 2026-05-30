@@ -251,6 +251,122 @@ Generate optimized ASO metadata. Return JSON:
   }
 });
 
+// POST /api/analysis/validate-idea
+// Body: { idea, country, lang }
+router.post('/validate-idea', async (req, res) => {
+  const { idea, country = 'us', lang = 'en' } = req.body;
+  if (!idea?.trim()) return res.status(400).json({ error: 'idea is required' });
+
+  const cacheKey = `validate:${idea.trim().toLowerCase().slice(0, 80)}:${country}`;
+  const cached = getCached(cacheKey);
+  if (cached) return res.json(cached);
+
+  try {
+    // Step 1: Extract niche keywords from the idea description
+    const extractPrompt = `Extract 3-5 short search keywords from this app idea description that would be used to search the app store. Return ONLY a JSON array of strings, e.g. ["keyword1","keyword2"]. Idea: "${idea.trim().slice(0, 500)}"`;
+    const kwRaw = await callClaude('Extract app store search keywords from an app idea. Return ONLY a JSON array.', extractPrompt);
+    let keywords = [];
+    try {
+      keywords = JSON.parse(kwRaw.replace(/```json|```/gi, '').trim());
+      if (!Array.isArray(keywords)) keywords = [];
+    } catch { keywords = [idea.trim().split(/\s+/).slice(0, 3).join(' ')]; }
+    keywords = keywords.slice(0, 4);
+
+    // Step 2: Search market for each keyword in parallel
+    const searchResults = await Promise.all(
+      keywords.map(kw =>
+        gplay.search({ term: kw, num: 20, country, lang, fullDetail: false }).catch(() => [])
+      )
+    );
+    const seen = new Set();
+    const allApps = [];
+    for (const apps of searchResults) {
+      for (const app of apps) {
+        if (!app?.appId || seen.has(app.appId)) continue;
+        seen.add(app.appId);
+        allApps.push(app);
+      }
+    }
+
+    // Step 3: Keyword difficulty for extracted keywords
+    const kwDifficulties = await Promise.all(keywords.map(async (kw) => {
+      try {
+        const apps = await gplay.search({ term: kw, num: 10, country, lang, fullDetail: false });
+        const avgRating = apps.reduce((s, a) => s + (a.score || 0), 0) / (apps.length || 1);
+        const avgReviews = apps.reduce((s, a) => s + (a.reviews || 0), 0) / (apps.length || 1);
+        const difficulty = Math.round((avgRating / 5) * 40 + Math.min(avgReviews / 100000, 1) * 40 + (apps.length / 10) * 20);
+        return { keyword: kw, difficulty, avgRating: parseFloat(avgRating.toFixed(2)), competition: apps.length };
+      } catch { return { keyword: kw, difficulty: 50 }; }
+    }));
+
+    // Step 4: Compute quick market metrics
+    const scored = allApps.filter(a => a.score > 0);
+    const avgRating = scored.length ? scored.reduce((s, a) => s + a.score, 0) / scored.length : 0;
+    const weakApps = allApps.filter(a => a.score > 0 && a.score < 4.0).length;
+    const avgDifficulty = Math.round(kwDifficulties.reduce((s, k) => s + k.difficulty, 0) / (kwDifficulties.length || 1));
+
+    const topCompetitors = allApps.slice(0, 5).map(a => ({
+      appId: a.appId, title: a.title, icon: a.icon, score: a.score, reviews: a.reviews, installs: a.installs,
+    }));
+
+    // Step 5: Claude synthesis
+    const systemPrompt = `You are a brutally honest app market strategist. Validate this app idea with real market data. Give a decisive Go/Caution/Avoid verdict with clear reasoning. Be specific. Respond ONLY with valid JSON.`;
+
+    const userPrompt = `App Idea: "${idea.trim()}"
+
+Market data found:
+- ${allApps.length} competing apps found across keywords: ${keywords.join(', ')}
+- Average competitor rating: ${avgRating.toFixed(2)}/5
+- Apps with <4.0 rating (opportunity gaps): ${weakApps}
+- Average keyword difficulty: ${avgDifficulty}/100
+- Total installs of top 20: ${allApps.slice(0, 20).reduce((s, a) => s + (a.minInstalls || 0), 0).toLocaleString()}
+
+Top competitors: ${topCompetitors.map(c => `${c.title} (${c.score}★, ${c.reviews} reviews)`).join(', ')}
+
+Return JSON:
+{
+  "verdict": "Go" | "Caution" | "Avoid",
+  "verdictScore": 0-100,
+  "verdictReason": "2-3 sentence direct assessment",
+  "marketFit": "high|medium|low",
+  "uniquenessScore": 0-100,
+  "uniquenessReason": "Is this idea differentiated enough? 1-2 sentences",
+  "buildDifficulty": "low|medium|high",
+  "timeToRevenue": "e.g. 3-6 months",
+  "targetAudience": "Who exactly would pay for this",
+  "monetizationSuggestion": "Best monetization approach with rough price point",
+  "winningAngle": "The ONE thing that would make this succeed against existing competitors",
+  "biggestRisk": "The single biggest threat to this idea",
+  "mvpScope": ["feature1", "feature2", "feature3"],
+  "estimatedRevenue": { "conservative": "e.g. $500-2k/mo", "optimistic": "e.g. $5-20k/mo" }
+}`;
+
+    const raw = await callClaude(systemPrompt, userPrompt);
+    const validation = JSON.parse(raw.replace(/```json|```/gi, '').trim());
+
+    const result = {
+      idea: idea.trim(),
+      country,
+      validatedAt: new Date().toISOString(),
+      extractedKeywords: keywords,
+      kwDifficulties,
+      marketData: {
+        totalApps: allApps.length,
+        avgRating: parseFloat(avgRating.toFixed(2)),
+        weakAppsCount: weakApps,
+        avgKeywordDifficulty: avgDifficulty,
+      },
+      topCompetitors,
+      ...validation,
+    };
+
+    setCache(cacheKey, result, 7200);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // POST /api/analysis/review-intelligence
 // Body: { appId, platform, country, lang }
 router.post('/review-intelligence', async (req, res) => {
