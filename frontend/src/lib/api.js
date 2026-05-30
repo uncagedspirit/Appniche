@@ -71,6 +71,9 @@ export const analysisAPI = {
 
   marketReport: (niche, country = 'us') =>
     api.post('/analysis/market-report', { niche, country }),
+
+  reviewIntelligence: (appId, platform = 'android', country = 'us') =>
+    api.post('/analysis/review-intelligence', { appId, platform, country }),
 };
 
 export default api;
