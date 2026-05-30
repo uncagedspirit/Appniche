@@ -11,6 +11,7 @@ import ASOOptimizer from './pages/ASOOptimizer.jsx';
 import SavedItems from './pages/SavedItems.jsx';
 import MarketReport from './pages/MarketReport.jsx';
 import ReviewIntelligence from './pages/ReviewIntelligence.jsx';
+import Watchlist from './pages/Watchlist.jsx';
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="saved" element={<SavedItems />} />
         <Route path="report" element={<MarketReport />} />
         <Route path="reviews" element={<ReviewIntelligence />} />
+        <Route path="watchlist" element={<Watchlist />} />
       </Route>
     </Routes>
   );
