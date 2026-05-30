@@ -6,7 +6,10 @@ const KEYS = {
   collections: 'appniche_collections',
 };
 
-const read = (key) => JSON.parse(localStorage.getItem(key) || '[]');
+const read = (key) => {
+  try { return JSON.parse(localStorage.getItem(key) || '[]'); }
+  catch { return []; }
+};
 const write = (key, data) => localStorage.setItem(key, JSON.stringify(data));
 const genId = () => Math.random().toString(36).slice(2, 10);
 

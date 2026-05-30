@@ -17,7 +17,7 @@ router.get('/search', async (req, res) => {
   try {
     let apps = [];
     if (platform === 'android') {
-      apps = await gplay.search({ term: q, num: parseInt(num), country, lang, fullDetail: false });
+      apps = await gplay.search({ term: q, num: Math.min(parseInt(num) || 20, 250), country, lang, fullDetail: false });
       apps = apps.map(a => ({
         appId: a.appId,
         title: a.title,
@@ -38,7 +38,7 @@ router.get('/search', async (req, res) => {
         platform: 'android'
       }));
     } else {
-      apps = await store.search({ term: q, num: parseInt(num), country });
+      apps = await store.search({ term: q, num: Math.min(parseInt(num) || 20, 250), country });
       apps = apps.map(a => ({
         appId: String(a.id),
         title: a.title,
@@ -150,7 +150,7 @@ router.get('/reviews', async (req, res) => {
     if (platform === 'android') {
       const sortMap = { newest: gplay.sort.NEWEST, rating: gplay.sort.RATING, helpfulness: gplay.sort.HELPFULNESS };
       const result = await gplay.reviews({
-        appId, sort: sortMap[sort] || gplay.sort.NEWEST, num: parseInt(num), lang, country
+        appId, sort: sortMap[sort] || gplay.sort.NEWEST, num: Math.min(parseInt(num) || 100, 500), lang, country
       });
       reviews = (result.data || []).map(r => ({
         id: r.id,
