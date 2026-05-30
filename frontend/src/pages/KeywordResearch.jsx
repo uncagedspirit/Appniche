@@ -22,6 +22,9 @@ export default function KeywordResearch() {
   const [topApps, setTopApps] = useState([]);
   const [appsLoading, setAppsLoading] = useState(false);
   const [selectedKeyword, setSelectedKeyword] = useState(null);
+  const [bulkInput, setBulkInput] = useState('');
+  const [bulkResults, setBulkResults] = useState([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -92,7 +95,45 @@ export default function KeywordResearch() {
     } catch { toast.error('Failed to save'); }
   };
 
+  const handleBulkAnalyze = async () => {
+    const kws = bulkInput.split('\n').map(k => k.trim()).filter(Boolean).slice(0, 50);
+    if (!kws.length) return;
+    setBulkLoading(true);
+    setBulkResults([]);
+    try {
+      const data = await keywordsAPI.difficulty(kws, country);
+      setBulkResults(data);
+      setTab('bulk');
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   const exportCSV = () => {
+    if (tab === 'bulk' && bulkResults.length) {
+      const header = 'keyword,difficulty,competition,avg_rating,avg_reviews\n';
+      const rows = bulkResults.map(k =>
+        `"${k.keyword}",${k.difficulty},${k.competition},${k.avgRating},${k.avgReviews || 0}`
+      ).join('\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([header + rows], { type: 'text/csv' }));
+      a.download = `bulk-keyword-analysis.csv`;
+      a.click();
+      return;
+    }
+    if (tab === 'difficulty' && difficulty.length) {
+      const header = 'keyword,difficulty,competition,avg_rating,avg_reviews\n';
+      const rows = difficulty.map(k =>
+        `"${k.keyword}",${k.difficulty},${k.competition},${k.avgRating},${k.avgReviews || 0}`
+      ).join('\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([header + rows], { type: 'text/csv' }));
+      a.download = `keyword-difficulty-${query}.csv`;
+      a.click();
+      return;
+    }
     const kws = tab === 'expanded' ? expanded?.keywords : suggestions?.combined;
     if (!kws?.length) return;
     const csv = 'keyword\n' + kws.join('\n');
@@ -106,6 +147,7 @@ export default function KeywordResearch() {
     { id: 'suggestions', label: 'Suggestions', count: suggestions?.combined?.length },
     { id: 'expanded', label: 'Full Expansion', count: expanded?.total },
     { id: 'difficulty', label: 'Difficulty', count: difficulty?.length },
+    { id: 'bulk', label: 'Bulk Analysis', count: bulkResults?.length },
   ];
 
   return (
@@ -128,6 +170,35 @@ export default function KeywordResearch() {
           </div>
         }
       />
+
+      {/* Bulk analysis panel — always visible */}
+      <div className="card mb-5">
+        <div className="flex items-start gap-4">
+          <div className="flex-1">
+            <p className="section-label mb-1.5">Bulk Keyword Analysis <span className="text-[10px] font-normal text-slate-400 ml-1">up to 50 keywords</span></p>
+            <textarea
+              value={bulkInput}
+              onChange={e => setBulkInput(e.target.value)}
+              placeholder={"meditation app\nhabit tracker\nbudget planner\nfitness coach\n…one per line"}
+              className="input h-24 resize-none font-mono text-xs"
+            />
+          </div>
+          <div className="pt-6 flex flex-col gap-2">
+            <button
+              onClick={handleBulkAnalyze}
+              disabled={bulkLoading || !bulkInput.trim()}
+              className="btn-primary text-sm whitespace-nowrap"
+            >
+              {bulkLoading ? 'Analyzing…' : 'Analyze All'}
+            </button>
+            {bulkResults.length > 0 && (
+              <button onClick={exportCSV} className="btn-secondary text-xs flex items-center gap-1.5">
+                <Download size={12} /> Export CSV
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Search form */}
       <form onSubmit={handleSearch} className="flex gap-3 mb-6">
@@ -241,6 +312,51 @@ export default function KeywordResearch() {
                   </div>
                 ) : (
                   <p className="text-sm text-ink-500">Select "Suggestions" tab first, then click "Analyze Difficulty".</p>
+                )}
+              </div>
+            )}
+
+            {tab === 'bulk' && (
+              <div>
+                {bulkLoading ? <LoadingState message="Analyzing all keywords in parallel…" /> : bulkResults.length > 0 ? (
+                  <div className="card overflow-hidden p-0">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50 border-b border-slate-100">
+                        <tr>
+                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500">Keyword</th>
+                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500">Difficulty</th>
+                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500">Competitors</th>
+                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500">Avg Rating</th>
+                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500">Avg Reviews</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bulkResults.sort((a, b) => a.difficulty - b.difficulty).map((kw, i) => (
+                          <tr
+                            key={kw.keyword}
+                            className={clsx('border-b border-slate-50 cursor-pointer hover:bg-blue-50 transition-colors', i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50')}
+                            onClick={() => handleKeywordClick(kw.keyword)}
+                          >
+                            <td className="px-4 py-2.5 font-medium text-slate-800">{kw.keyword}</td>
+                            <td className="px-4 py-2.5">
+                              <span className={clsx('px-2 py-0.5 rounded-full text-xs font-bold',
+                                kw.difficulty < 40 ? 'bg-emerald-100 text-emerald-700' :
+                                kw.difficulty < 70 ? 'bg-amber-100 text-amber-700' :
+                                'bg-red-100 text-red-700'
+                              )}>
+                                {kw.difficulty < 40 ? 'Easy' : kw.difficulty < 70 ? 'Medium' : 'Hard'} {kw.difficulty}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2.5 text-slate-600">{kw.competition}</td>
+                            <td className="px-4 py-2.5 text-slate-600">{kw.avgRating}★</td>
+                            <td className="px-4 py-2.5 text-slate-600">{kw.avgReviews?.toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">Paste keywords above and click "Analyze All".</p>
                 )}
               </div>
             )}
