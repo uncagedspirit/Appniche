@@ -94,7 +94,7 @@ Analyze these reviews and return JSON with this exact structure:
     setCache(cacheKey, analysis, 7200);
     res.json(analysis);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: 'Request failed' });
   }
 });
 
@@ -143,7 +143,7 @@ Generate 3 distinct app ideas that fill these gaps. Return JSON:
     setCache(cacheKey, result, 7200);
     res.json(result);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: 'Request failed' });
   }
 });
 
@@ -212,7 +212,7 @@ Return JSON:
     setCache(cacheKey, matrix, 7200);
     res.json(matrix);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: 'Request failed' });
   }
 });
 
@@ -247,7 +247,7 @@ Generate optimized ASO metadata. Return JSON:
     const clean = raw.replace(/```json|```/gi, '').trim();
     res.json(JSON.parse(clean));
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: 'Request failed' });
   }
 });
 
@@ -363,7 +363,7 @@ Return JSON:
     setCache(cacheKey, result, 7200);
     res.json(result);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: 'Request failed' });
   }
 });
 
@@ -452,7 +452,7 @@ Return JSON with this exact structure:
     setCache(cacheKey, result, 7200);
     res.json(result);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: 'Request failed' });
   }
 });
 
@@ -567,7 +567,7 @@ Return JSON:
     setCache(cacheKey, report, 7200);
     res.json(report);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: 'Request failed' });
   }
 });
 

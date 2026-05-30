@@ -846,10 +846,8 @@ export default function Dashboard() {
           else                             errorN++;
         });
         setApps(prev => prev.map(a => map[a.appId] ? { ...a, _status: map[a.appId] } : a));
-      } catch (err) {
-        // batch failed — mark as errors but keep going
+      } catch {
         errorN += Math.min(15, ids.length - i);
-        console.warn('checkApps batch failed:', err?.message);
       }
       setCheckProgress({ done: Math.min(i + 15, ids.length), total: ids.length });
     }

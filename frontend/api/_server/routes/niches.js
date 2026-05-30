@@ -316,7 +316,7 @@ router.get('/analyze', async (req, res) => {
     setCache(cacheKey, result, 3600);
     res.json(result);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: 'Request failed' });
   }
 });
 
@@ -360,7 +360,7 @@ router.get('/opportunities', async (req, res) => {
     setCache(cacheKey, valid, 3600);
     res.json(valid);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: 'Request failed' });
   }
 });
 
@@ -478,7 +478,7 @@ router.get('/search', async (req, res) => {
     }
 
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: 'Request failed' });
   }
 });
 
