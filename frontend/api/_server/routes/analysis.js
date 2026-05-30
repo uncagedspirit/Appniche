@@ -251,4 +251,119 @@ Generate optimized ASO metadata. Return JSON:
   }
 });
 
+// POST /api/analysis/market-report
+// Body: { niche, country, lang }
+router.post('/market-report', async (req, res) => {
+  const { niche, country = 'us', lang = 'en' } = req.body;
+  if (!niche?.trim()) return res.status(400).json({ error: 'niche is required' });
+
+  const cacheKey = `market-report:${niche.trim().toLowerCase()}:${country}`;
+  const cached = getCached(cacheKey);
+  if (cached) return res.json(cached);
+
+  try {
+    const [searchResults, suggestions] = await Promise.all([
+      gplay.search({ term: niche, num: 50, country, lang, fullDetail: false }).catch(() => []),
+      gplay.suggest({ term: niche, country, lang }).catch(() => []),
+    ]);
+
+    const top5 = searchResults.slice(0, 5);
+    const detailResults = await Promise.allSettled(
+      top5.map(app => Promise.race([
+        gplay.app({ appId: app.appId, country, lang }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000)),
+      ]))
+    );
+    const competitors = detailResults.map((r, i) => r.status === 'fulfilled' ? r.value : top5[i]);
+
+    const topKeywords = (suggestions || []).slice(0, 6);
+    const kwDifficulties = await Promise.all(topKeywords.map(async (kw) => {
+      try {
+        const apps = await gplay.search({ term: kw, num: 10, country, lang, fullDetail: false });
+        const avgRating = apps.reduce((s, a) => s + (a.score || 0), 0) / (apps.length || 1);
+        const avgReviews = apps.reduce((s, a) => s + (a.reviews || 0), 0) / (apps.length || 1);
+        const difficulty = Math.round((avgRating / 5) * 40 + Math.min(avgReviews / 100000, 1) * 40 + (apps.length / 10) * 20);
+        return { keyword: kw, difficulty, competition: apps.length, avgRating: parseFloat(avgRating.toFixed(2)) };
+      } catch { return { keyword: kw, difficulty: 50 }; }
+    }));
+
+    const scored = searchResults.filter(a => a.score > 0);
+    const avgRating = scored.length ? scored.reduce((s, a) => s + a.score, 0) / scored.length : 0;
+    const avgReviews = searchResults.reduce((s, a) => s + (a.reviews || 0), 0) / (searchResults.length || 1);
+    const totalInstalls = searchResults.reduce((s, a) => s + (a.minInstalls || 0), 0);
+    const weakApps = searchResults.filter(a => a.score > 0 && a.score < 4.0).length;
+
+    const opportunityScore = Math.min(100, Math.max(0, Math.round(
+      ((5 - avgRating) / 5) * 40 +
+      (weakApps / Math.max(searchResults.length, 1)) * 30 +
+      Math.min(Math.log10(Math.max(totalInstalls, 10)) / Math.log10(10_000_000) * 30, 30)
+    )));
+
+    const competitorSummary = competitors.slice(0, 5).map(a =>
+      `- ${a.title}: ${a.score}★, ${a.reviews} reviews, ${a.installs || 'unknown'} installs. ${(a.description || '').slice(0, 100)}`
+    ).join('\n');
+
+    const systemPrompt = `You are a senior app market strategist. Analyze real market data and give a precise, actionable market entry report. Be honest about saturation. Respond ONLY with valid JSON.`;
+
+    const userPrompt = `Niche: "${niche}"
+Market data:
+- Apps found: ${searchResults.length}
+- Avg rating: ${avgRating.toFixed(2)}/5
+- Avg reviews per app: ${Math.round(avgReviews)}
+- Total installs (top 50): ${totalInstalls.toLocaleString()}
+- Apps rated below 4.0: ${weakApps} of ${searchResults.length}
+- Opportunity score: ${opportunityScore}/100
+
+Top competitors:
+${competitorSummary}
+
+Top keywords: ${topKeywords.join(', ')}
+
+Return JSON:
+{
+  "verdict": "Go" | "Caution" | "Avoid",
+  "verdictReason": "2-sentence explanation of the verdict",
+  "marketSummary": "3-sentence overview of the market landscape",
+  "whitespace": "The specific gap no current app fills well (1-2 sentences)",
+  "differentiationAngles": ["angle1", "angle2", "angle3"],
+  "revenueEstimate": {
+    "conservative": "$X-Yk/mo at 1000 DAU",
+    "optimistic": "$X-Yk/mo at 5000 DAU"
+  },
+  "topKeywordsInsight": "1-2 sentences on keyword opportunity in this niche",
+  "risks": ["risk1", "risk2", "risk3"],
+  "goToMarketTip": "The single most important first move to enter this market"
+}`;
+
+    const raw = await callClaude(systemPrompt, userPrompt);
+    const aiInsights = JSON.parse(raw.replace(/```json|```/gi, '').trim());
+
+    const report = {
+      niche,
+      country,
+      generatedAt: new Date().toISOString(),
+      opportunityScore,
+      marketData: {
+        totalApps: searchResults.length,
+        avgRating: parseFloat(avgRating.toFixed(2)),
+        avgReviews: Math.round(avgReviews),
+        totalInstalls,
+        weakAppsCount: weakApps,
+      },
+      topCompetitors: competitors.slice(0, 5).map(a => ({
+        appId: a.appId, title: a.title, developer: a.developer,
+        icon: a.icon, score: a.score, reviews: a.reviews,
+        installs: a.installs, description: (a.description || '').slice(0, 150),
+      })),
+      topKeywords: kwDifficulties,
+      ...aiInsights,
+    };
+
+    setCache(cacheKey, report, 7200);
+    res.json(report);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export default router;
