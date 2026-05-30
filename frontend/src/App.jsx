@@ -9,6 +9,7 @@ import AppAnalyzer from './pages/AppAnalyzer.jsx';
 import IdeaGenerator from './pages/IdeaGenerator.jsx';
 import ASOOptimizer from './pages/ASOOptimizer.jsx';
 import SavedItems from './pages/SavedItems.jsx';
+import MarketReport from './pages/MarketReport.jsx';
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="ideas" element={<IdeaGenerator />} />
         <Route path="aso" element={<ASOOptimizer />} />
         <Route path="saved" element={<SavedItems />} />
+        <Route path="report" element={<MarketReport />} />
       </Route>
     </Routes>
   );

@@ -68,6 +68,9 @@ export const analysisAPI = {
 
   asoOptimize: (appName, description, targetKeywords, category, platform = 'android') =>
     api.post('/analysis/aso-optimize', { appName, description, targetKeywords, category, platform }),
+
+  marketReport: (niche, country = 'us') =>
+    api.post('/analysis/market-report', { niche, country }),
 };
 
 export default api;
