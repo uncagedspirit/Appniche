@@ -266,6 +266,7 @@ router.get('/categories', (req, res) => {
 router.get('/analyze', async (req, res) => {
   const { category, country = 'us', lang = 'en' } = req.query;
   if (!category) return res.status(400).json({ error: 'category is required' });
+  if (!CATEGORIES.find(c => c.id === category)) return res.status(400).json({ error: 'unknown category' });
 
   const cacheKey = `niche:${category}:${country}`;
   const cached = getCached(cacheKey);

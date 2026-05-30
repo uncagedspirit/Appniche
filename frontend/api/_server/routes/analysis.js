@@ -158,6 +158,7 @@ router.post('/competitor-matrix', async (req, res) => {
   if (cached) return res.json(cached);
 
   try {
+    const iosStore = platform === 'ios' ? (await import('app-store-scraper')).default : null;
     const apps = await Promise.all(appIds.slice(0, 8).map(async (appId) => {
       try {
         if (platform === 'android') {
@@ -170,7 +171,14 @@ router.post('/competitor-matrix', async (req, res) => {
             description: a.description?.slice(0, 300)
           };
         }
-        return null;
+        const a = await iosStore.app({ id: appId, country });
+        return {
+          appId: String(a.id), title: a.title, developer: a.developer, icon: a.icon,
+          score: a.score, reviews: a.reviews, installs: null,
+          minInstalls: null, free: a.free, price: a.price,
+          updated: a.updated, version: a.version, genre: a.primaryGenre,
+          description: a.description?.slice(0, 300)
+        };
       } catch { return null; }
     }));
 
