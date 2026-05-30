@@ -1,19 +1,12 @@
 import express from 'express';
 import gplay from 'google-play-scraper';
-import store from 'app-store-scraper';
 import axios from 'axios';
 import { getCached, setCache } from '../services/cache.js';
 
 const router = express.Router();
 
-// Generate alphabet expansions for a seed keyword
 function alphabetExpand(seed) {
-  const letters = 'abcdefghijklmnopqrstuvwxyz'.split('');
-  const expansions = [];
-  letters.forEach(l => {
-    expansions.push(`${seed} ${l}`);
-  });
-  return expansions;
+  return 'abcdefghijklmnopqrstuvwxyz'.split('').map(l => `${seed} ${l}`);
 }
 
 // Play Store suggestions
@@ -75,7 +68,7 @@ router.get('/expand', async (req, res) => {
   base.forEach(k => allKeywords.add(k));
 
   // Process expansions in batches
-  for (let i = 0; i < Math.min(expansions.length, 26); i += batchSize) {
+  for (let i = 0; i < expansions.length; i += batchSize) {
     const batch = expansions.slice(i, i + batchSize);
     const results = await Promise.all(batch.map(e => getPlaySuggestions(e, lang, country)));
     results.forEach(arr => arr.forEach(k => allKeywords.add(k)));

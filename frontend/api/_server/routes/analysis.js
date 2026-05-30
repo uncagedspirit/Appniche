@@ -86,7 +86,7 @@ Analyze these reviews and return JSON with this exact structure:
 }`;
 
     const raw = await callClaude(systemPrompt, userPrompt);
-    const clean = raw.replace(/```json|```/g, '').trim();
+    const clean = raw.replace(/```json|```/gi, '').trim();
     const analysis = JSON.parse(clean);
     analysis.appId = appId;
     analysis.platform = platform;
@@ -138,7 +138,7 @@ Generate 3 distinct app ideas that fill these gaps. Return JSON:
 
   try {
     const raw = await callClaude(systemPrompt, userPrompt);
-    const clean = raw.replace(/```json|```/g, '').trim();
+    const clean = raw.replace(/```json|```/gi, '').trim();
     const result = JSON.parse(clean);
     setCache(cacheKey, result, 7200);
     res.json(result);
@@ -205,7 +205,7 @@ Return JSON:
 }`;
 
     const raw = await callClaude(systemPrompt, userPrompt);
-    const clean = raw.replace(/```json|```/g, '').trim();
+    const clean = raw.replace(/```json|```/gi, '').trim();
     const matrix = JSON.parse(clean);
     matrix.apps = valid;
 
@@ -244,7 +244,7 @@ Generate optimized ASO metadata. Return JSON:
 
   try {
     const raw = await callClaude(systemPrompt, userPrompt);
-    const clean = raw.replace(/```json|```/g, '').trim();
+    const clean = raw.replace(/```json|```/gi, '').trim();
     res.json(JSON.parse(clean));
   } catch (e) {
     res.status(500).json({ error: e.message });
