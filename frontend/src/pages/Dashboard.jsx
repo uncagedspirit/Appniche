@@ -935,126 +935,114 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col h-full min-h-screen bg-slate-50">
 
-      {/* ── TOP BAR ── */}
-      <div className="bg-white border-b border-slate-200 px-4 py-2.5 flex items-center gap-2 sticky top-0 z-20 shadow-sm flex-wrap">
-        {/* Search input */}
-        <div className="relative flex-1 min-w-[160px] max-w-xs">
-          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"/>
-          <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={handleKey}
-            placeholder="Search keyword…"
-            className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 bg-white text-slate-900"/>
-        </div>
-
-        {/* Country — changing country auto-refetches */}
-        <select value={country} onChange={e => handleCountryChange(e.target.value)}
-          className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:border-blue-400"
-          title="Changing country will re-fetch results">
-          {COUNTRIES.map(([c,l]) => <option key={c} value={c}>{l}</option>)}
-        </select>
-
-        <button onClick={() => doSearch(query, country)}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1.5">
-          <RefreshCw size={13}/> Search
-        </button>
-
-        <Sep/>
-
-        {/* Column picker */}
-        <button onClick={() => setShowPicker(true)}
-          className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors">
-          <Settings2 size={14}/> Columns <span className="text-xs text-blue-600 font-semibold">{metrics.length}</span>
-        </button>
-
-        {/* View toggle */}
-        <div className="flex items-center bg-slate-100 border border-slate-200 rounded-lg p-0.5 gap-0.5">
-          {[['table',Table2,'Table'],['grid',LayoutGrid,'Grid'],['full',AlignJustify,'Full']].map(([v,Icon,l]) => (
-            <button key={v} onClick={() => setView(v)} title={l}
-              className={clsx('flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all',
-                view === v ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
-              <Icon size={13}/>{l}
-            </button>
-          ))}
-        </div>
-
-        <Sep/>
-
-        {/* Filters */}
-        <button onClick={() => setShowFilters(v => !v)}
-          className={clsx('flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors',
-            showFilters || activeCount > 0 ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50')}>
-          <SlidersHorizontal size={14}/> Filters
-          {activeCount > 0 && <span className="w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">{activeCount}</span>}
-        </button>
-        {activeCount > 0 && (
-          <button onClick={() => setFilters(FILTER_DEFAULTS)} className="flex items-center gap-1 text-xs text-slate-500 hover:text-red-500 transition-colors"><X size={11}/> Clear</button>
-        )}
-
-        {/* Title-only toggle — when ON, only apps whose title contains the search
-            term are shown. Useful for "puzzle" (filter out Candy Crush), but
-            should be OFF for niches like "meditation" where top apps (Calm,
-            Headspace) don't have the keyword in their name. */}
-        <label className="flex items-center gap-1.5 cursor-pointer select-none ml-1"
-          title={strictTitle ? 'Title filter ON — only apps with keyword in their name are shown. Turn off to see all Google Play results.' : 'Title filter OFF — showing all Google Play results. Turn on to see only apps whose name contains the keyword.'}>
-          <input type="checkbox" checked={strictTitle} onChange={e => setStrictTitle(e.target.checked)}
-            className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"/>
-          <span className={clsx('text-xs font-medium', strictTitle ? 'text-blue-700' : 'text-slate-500')}>
-            Title only {strictTitle ? '●' : ''}
-          </span>
-        </label>
-
-        <Sep/>
-
-        {/* Check removed */}
-        <div className="flex items-center gap-2">
-          <button onClick={checkRemoved} disabled={checkingRemoved}
-            className={clsx('flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg border transition-colors',
-              checkingRemoved ? 'bg-orange-50 border-orange-200 text-orange-600 cursor-wait' : 'bg-white border-slate-200 text-slate-600 hover:bg-red-50 hover:border-red-200 hover:text-red-600')}>
-            {checkingRemoved
-              ? <><MiniSpin/>{checkProgress ? `${checkProgress.done}/${checkProgress.total} checking…` : '…'}</>
-              : <><AlertCircle size={13}/>Check Removed</>}
+      {/* ── TOP BAR — two tiers ── */}
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
+        {/* Row 1: Search + core actions */}
+        <div className="px-4 py-2.5 flex items-center gap-2">
+          <div className="relative flex-1 min-w-[160px]">
+            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"/>
+            <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={handleKey}
+              placeholder="Search any keyword or niche…"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 bg-white text-slate-900"/>
+          </div>
+          <select value={country} onChange={e => handleCountryChange(e.target.value)}
+            className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:border-blue-400 flex-shrink-0"
+            title="Changing country re-fetches results">
+            {COUNTRIES.map(([c,l]) => <option key={c} value={c}>{l}</option>)}
+          </select>
+          <button onClick={() => doSearch(query, country)}
+            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1.5 flex-shrink-0">
+            <RefreshCw size={13}/> Search
           </button>
-          {/* Result summary shown after check completes */}
-          {checkSummary && !checkingRemoved && (
-            <span className="text-xs flex items-center gap-1.5 font-medium">
-              <span className="text-green-600">{checkSummary.live} live</span>
-              {checkSummary.removed > 0 && <span className="text-red-600 font-bold">{checkSummary.removed} removed</span>}
-              {checkSummary.errors  > 0 && <span className="text-slate-400">{checkSummary.errors} err</span>}
-            </span>
+
+          <Sep/>
+
+          {/* View toggle */}
+          <div className="flex items-center bg-slate-100 border border-slate-200 rounded-lg p-0.5 gap-0.5 flex-shrink-0">
+            {[['table',Table2,'Table'],['grid',LayoutGrid,'Grid'],['full',AlignJustify,'Full']].map(([v,Icon,l]) => (
+              <button key={v} onClick={() => setView(v)} title={l}
+                className={clsx('flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all',
+                  view === v ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                <Icon size={13}/>{l}
+              </button>
+            ))}
+          </div>
+
+          {/* Column picker */}
+          <button onClick={() => setShowPicker(true)}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors flex-shrink-0">
+            <Settings2 size={14}/> Columns
+            <span className="text-[11px] bg-blue-100 text-blue-700 font-semibold px-1.5 py-0.5 rounded-full">{metrics.length}</span>
+          </button>
+        </div>
+
+        {/* Row 2: Filters + secondary tools */}
+        <div className="px-4 py-1.5 flex items-center gap-3 border-t border-slate-100 bg-slate-50/60">
+          <button onClick={() => setShowFilters(v => !v)}
+            className={clsx('flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors',
+              showFilters || activeCount > 0 ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50')}>
+            <SlidersHorizontal size={12}/> Filters
+            {activeCount > 0 && <span className="w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">{activeCount}</span>}
+          </button>
+          {activeCount > 0 && (
+            <button onClick={() => setFilters(FILTER_DEFAULTS)} className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 transition-colors"><X size={10}/> Clear filters</button>
           )}
+
+          <label className="flex items-center gap-1.5 cursor-pointer select-none"
+            title="Show only apps whose title contains the search keyword">
+            <input type="checkbox" checked={strictTitle} onChange={e => setStrictTitle(e.target.checked)}
+              className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 cursor-pointer"/>
+            <span className={clsx('text-xs font-medium', strictTitle ? 'text-blue-700' : 'text-slate-500')}>Title match only</span>
+          </label>
+
+          <div className="ml-auto flex items-center gap-2">
+            <button onClick={checkRemoved} disabled={checkingRemoved}
+              className={clsx('flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors',
+                checkingRemoved ? 'bg-orange-50 border-orange-200 text-orange-600 cursor-wait' : 'bg-white border-slate-200 text-slate-500 hover:bg-red-50 hover:border-red-200 hover:text-red-600')}>
+              {checkingRemoved
+                ? <><MiniSpin/>{checkProgress ? `${checkProgress.done}/${checkProgress.total}…` : '…'}</>
+                : <><AlertCircle size={12}/>Check Removed</>}
+            </button>
+            {checkSummary && !checkingRemoved && (
+              <span className="text-xs flex items-center gap-1.5">
+                <span className="text-green-600 font-medium">{checkSummary.live} live</span>
+                {checkSummary.removed > 0 && <span className="text-red-600 font-bold">{checkSummary.removed} removed</span>}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* ── STATS BAR (AppStoreSpy-style prominent numbers) ── */}
-      <div className="bg-white border-b border-slate-200 px-5 py-3 flex items-center gap-5 overflow-x-auto market-scroll flex-shrink-0">
+      {/* ── STATS BAR ── */}
+      <div className="bg-white border-b border-slate-100 px-5 py-2.5 flex items-center gap-4 overflow-x-auto market-scroll flex-shrink-0">
+        <div className="flex items-center gap-4">
+          <BigStat label="Fetched"     value={apps.length}/>
+          <div className="w-px h-7 bg-slate-200 flex-shrink-0"/>
+          <BigStat label="Filtered"    value={displayed.length}/>
+          {removedCount > 0 && <>
+            <div className="w-px h-7 bg-slate-200 flex-shrink-0"/>
+            <BigStat label="Removed" value={removedCount} red/>
+          </>}
+        </div>
 
-        <BigStat label="Fetched"     value={apps.length}/>
-        <div className="w-px h-8 bg-slate-200 flex-shrink-0"/>
-        <BigStat label="Title Match" value={titleMatchedApps.length}/>
-        <div className="w-px h-8 bg-slate-200 flex-shrink-0"/>
-        <BigStat label="Visible"     value={displayed.length}/>
-        {removedCount > 0 && <>
-          <div className="w-px h-8 bg-slate-200 flex-shrink-0"/>
-          <BigStat label="Removed" value={removedCount} red/>
-        </>}
+        {m && (
+          <div className="flex items-center gap-2 ml-3 pl-3 border-l border-slate-200">
+            <span className={clsx('inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0',
+              m.opportunityScore >= 65 ? 'bg-green-100 text-green-700' : m.opportunityScore >= 45 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700')}>
+              Opportunity {m.opportunityScore}
+            </span>
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 flex-shrink-0">
+              Demand {m.demandScore}
+            </span>
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 flex-shrink-0">
+              Competition {m.competitionScore}
+            </span>
+          </div>
+        )}
 
-        {m && <>
-          <div className="w-px h-8 bg-slate-200 flex-shrink-0"/>
-          <span className={clsx('inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0',
-            m.opportunityScore >= 65 ? 'bg-green-100 text-green-700' : m.opportunityScore >= 45 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700')}>
-            Opp {m.opportunityScore}
-          </span>
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 flex-shrink-0">
-            Demand {m.demandScore}
-          </span>
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 flex-shrink-0">
-            Competition {m.competitionScore}
-          </span>
-        </>}
-
-        {/* Batch progress — right side */}
         <div className="ml-auto flex items-center gap-3 flex-shrink-0">
           {loadingMore && (
-            <div className="flex items-center gap-2 text-sm text-blue-600">
+            <div className="flex items-center gap-2 text-blue-600">
               <MiniSpin/>
               <span className="text-xs font-medium">Loading batch {currentBatch + 2}/6…</span>
             </div>
@@ -1063,11 +1051,11 @@ export default function Dashboard() {
             <button onClick={loadMore}
               className="px-3 py-1.5 text-xs font-semibold bg-blue-50 text-blue-700 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors flex items-center gap-1.5">
               <RefreshCw size={11}/>
-              Load More ({apps.length} fetched, batch {currentBatch + 2}/6)
+              Load More · batch {currentBatch + 2}/6
             </button>
           )}
           {currentBatch >= MAX_TOTAL_BATCH && !loadingMore && (
-            <span className="text-xs text-slate-400 font-medium">All 6 batches loaded</span>
+            <span className="text-xs text-slate-400">All batches loaded</span>
           )}
         </div>
       </div>
