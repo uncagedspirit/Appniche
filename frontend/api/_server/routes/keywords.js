@@ -110,12 +110,25 @@ router.get('/difficulty', async (req, res) => {
       const countFactor = (apps.length / 10) * 20;
       const difficulty = Math.round(ratingFactor + reviewFactor + countFactor);
 
+      // Traffic score: proxy for search volume based on engagement of top results
+      // High reviews + full result set = lots of people searching this keyword
+      const trafficScore = Math.min(100, Math.round(
+        (Math.min(avgReviews, 500000) / 500000) * 65 +
+        (apps.length / 10) * 35
+      ));
+      const trafficLabel = trafficScore >= 75 ? 'Very High'
+        : trafficScore >= 50 ? 'High'
+        : trafficScore >= 25 ? 'Medium'
+        : 'Low';
+
       return {
         keyword: kw,
         difficulty,
         competition: apps.length,
         avgRating: parseFloat(avgRating.toFixed(2)),
         avgReviews: Math.round(avgReviews),
+        trafficScore,
+        trafficLabel,
         topApps: apps.slice(0, 3).map(a => ({ title: a.title, score: a.score, appId: a.appId }))
       };
     } catch (e) {

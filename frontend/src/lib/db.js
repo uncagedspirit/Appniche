@@ -5,6 +5,7 @@ const KEYS = {
   tracked: 'appniche_tracked',
   collections: 'appniche_collections',
   watchlist: 'appniche_watchlist',
+  rankHistory: 'appniche_rank_history',
 };
 
 const read = (key) => {
@@ -83,6 +84,40 @@ export const dbOps = {
 
   async setUserProfile(_uid, _data) {},
   async getUserProfile(_uid) { return null; },
+
+  // Keyword rank snapshots — stored per keyword+country combo
+  saveRankSnapshot(keyword, country, apps) {
+    const all = read(KEYS.rankHistory);
+    const item = {
+      id: genId(),
+      keyword: keyword.toLowerCase().trim(),
+      country,
+      date: new Date().toISOString(),
+      apps: apps.slice(0, 20).map((a, i) => ({
+        rank: i + 1,
+        appId: a.appId,
+        title: a.title,
+        icon: a.icon,
+        score: a.score,
+      })),
+    };
+    write(KEYS.rankHistory, [item, ...all].slice(0, 1000));
+    return item;
+  },
+  getRankHistory(keyword) {
+    const norm = keyword.toLowerCase().trim();
+    return read(KEYS.rankHistory)
+      .filter(x => x.keyword === norm)
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+  },
+  getTrackedRankKeywords() {
+    const all = read(KEYS.rankHistory);
+    return [...new Set(all.map(x => x.keyword))];
+  },
+  deleteRankHistory(keyword) {
+    const norm = keyword.toLowerCase().trim();
+    write(KEYS.rankHistory, read(KEYS.rankHistory).filter(x => x.keyword !== norm));
+  },
 
   async addToWatchlist(_uid, appData) {
     const id = `${appData.platform}_${appData.appId}`;
